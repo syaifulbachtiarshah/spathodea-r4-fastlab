@@ -58,38 +58,60 @@ Stage 4: consensus  (openai primary + gemini reviewer)
 |------|-------|
 | Endpoint | `POST http://127.0.0.1:11434/api/generate` |
 | Health | `GET http://127.0.0.1:11434/api/tags` |
-| Model | `llama3.2:3b` (or whatever is pulled locally) |
+| Model (smoke-test) | `qwen2.5:7b` (preferred first) |
+| Model (secondary) | `llama3.2:3b` (comparison) |
+| Model selection | **Runtime detection** — query `/api/tags` for locally available models |
 | Auth | None |
 | Timeout | 120 seconds |
 | Retry | Yes (connection refused = retryable) |
 
-**Exit criteria:** Single request/response works. Health check passes. LIVE-20 dry-run validates requests for ollama provider.
+**Important:** Do NOT hard-code any model name. ATAN must detect locally available models at runtime via the `/api/tags` endpoint and select from what is pulled. The preferred smoke-test order is `qwen2.5:7b` first, `llama3.2:3b` second, then any available model.
+
+**Exit criteria:** Single request/response works. Health check passes. Model auto-detection works. LIVE-20 dry-run validates requests for ollama provider.
 
 ### 3.2 Stage 2 — OpenAI
 
 | Item | Value |
 |------|-------|
-| Endpoint | `POST https://api.openai.com/v1/chat/completions` |
+| API Architecture | **OpenAI Responses API** |
 | Auth | `Authorization: Bearer $OPENAI_API_KEY` |
-| Model | `gpt-4o-mini` (generation), `gpt-4o` (review) |
+| Model | Configured via `OPENAI_MODEL` env var or config (do NOT hard-code) |
+| Current preferred | Configurable (set in `.env` or `config/providers.yaml`) |
 | Timeout | 120 seconds |
 | Retry | Yes (429, 5xx, timeout) |
 | Non-retryable | 401, 400, safety block |
 
-**Exit criteria:** Single generation works. Token usage reported. Latency measured.
+**Important:** Do NOT hard-code `gpt-4o-mini`, `gpt-4o`, or any specific model name. The model MUST be read from `OPENAI_MODEL` environment variable or config. Do NOT assume Chat Completions API is the required integration path — the current preferred API architecture is the **OpenAI Responses API**.
+
+**Exit criteria:** Single generation works. Token usage reported. Latency measured. Model configurable at runtime.
 
 ### 3.3 Stage 3 — Gemini
 
 | Item | Value |
 |------|-------|
-| SDK | `google-generativeai` Python package |
-| Auth | `GEMINI_API_KEY` env var → `genai.configure(api_key=...)` |
-| Model | `gemini-2.0-flash` |
+| SDK | `google-genai` Python package |
+| Usage | `from google import genai` / `client = genai.Client()` |
+| Auth | `GEMINI_API_KEY` env var (configured via Google AI Studio) |
+| Model | Configured via `GEMINI_MODEL` env var or config (do NOT hard-code) |
+| Current intended | `gemini-3.7-flash` (configurable, not fixed) |
 | Timeout | 120 seconds |
 | Retry | Yes (RESOURCE_EXHAUSTED, 5xx, timeout) |
 | Non-retryable | PERMISSION_DENIED, INVALID_ARGUMENT, safety block |
 
-**Exit criteria:** Single generation works. Token usage normalized. Latency measured.
+**Important:** Do NOT use the deprecated `google-generativeai` package. Use `google-genai` with the new client pattern:
+
+```python
+from google import genai
+client = genai.Client()
+response = client.models.generate_content(
+    model=GEMINI_MODEL,
+    contents=prompt,
+)
+```
+
+Do NOT hard-code `gemini-2.0-flash` or any specific model. The model MUST be read from `GEMINI_MODEL` environment variable or config. The current intended model is `gemini-3.7-flash` but runtime must remain configurable.
+
+**Exit criteria:** Single generation works. Token usage normalized. Latency measured. Model configurable at runtime.
 
 ### 3.4 Stage 4 — Consensus (OpenAI + Gemini)
 
