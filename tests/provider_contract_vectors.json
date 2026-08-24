@@ -1,0 +1,864 @@
+{
+  "version": "0.2.0",
+  "description": "Offline provider contract test vectors. Covers mock, openai, gemini, ollama across all dispatch patterns and error scenarios. No real network calls required.",
+  "created": "2026-08-24",
+  "phase": "2E-A",
+  "categories": [
+    "single", "fallback", "consensus", "request_id", "task_type",
+    "usage", "latency", "not_configured", "unavailable",
+    "rate_limit", "timeout", "invalid_model", "clean_error"
+  ],
+  "vectors": [
+    {
+      "id": "vec-001",
+      "category": "single",
+      "provider": "mock",
+      "description": "Basic single-provider mock generation",
+      "request": {
+        "prompt": "What is the capital of Malaysia?",
+        "system_prompt": "You are a helpful assistant.",
+        "model": "buzz-mock-v1",
+        "temperature": 0.8,
+        "max_tokens": 2048,
+        "top_p": 0.95,
+        "stop_sequences": null,
+        "request_id": "vec-001-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "mock",
+        "reviewer_preference": null,
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "expected_response": {
+        "is_success": true,
+        "provider": "mock",
+        "finish_reason": "mock",
+        "request_id_echoed": true,
+        "content_min_length": 20,
+        "usage_keys_present": ["prompt_tokens", "completion_tokens", "total_tokens"],
+        "latency_gte": 0.0,
+        "error": null
+      }
+    },
+    {
+      "id": "vec-002",
+      "category": "single",
+      "provider": "openai",
+      "description": "Basic single-provider OpenAI generation (simulated)",
+      "request": {
+        "prompt": "Explain photosynthesis in two sentences.",
+        "system_prompt": "You are a science tutor.",
+        "model": "gpt-4o-mini",
+        "temperature": 0.7,
+        "max_tokens": 256,
+        "top_p": 0.9,
+        "stop_sequences": null,
+        "request_id": "vec-002-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "openai",
+        "reviewer_preference": null,
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "expected_response": {
+        "is_success": true,
+        "provider": "openai",
+        "finish_reason_one_of": ["stop", "length"],
+        "request_id_echoed": true,
+        "content_min_length": 20,
+        "usage_keys_present": ["prompt_tokens", "completion_tokens", "total_tokens"],
+        "usage_total_equals_sum": true,
+        "latency_gte": 0.0,
+        "error": null
+      }
+    },
+    {
+      "id": "vec-003",
+      "category": "single",
+      "provider": "gemini",
+      "description": "Basic single-provider Gemini generation (simulated)",
+      "request": {
+        "prompt": "Terangkan proses fotosintesis dalam dua ayat.",
+        "system_prompt": "Anda adalah tutor sains.",
+        "model": "gemini-2.0-flash",
+        "temperature": 0.7,
+        "max_tokens": 256,
+        "top_p": 0.9,
+        "stop_sequences": null,
+        "request_id": "vec-003-req",
+        "metadata": {"language": "ms"},
+        "provider_preference": "gemini",
+        "reviewer_preference": null,
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "expected_response": {
+        "is_success": true,
+        "provider": "gemini",
+        "finish_reason_one_of": ["stop", "length"],
+        "request_id_echoed": true,
+        "content_min_length": 20,
+        "usage_keys_present": ["prompt_tokens", "completion_tokens", "total_tokens"],
+        "latency_gte": 0.0,
+        "error": null
+      }
+    },
+    {
+      "id": "vec-004",
+      "category": "single",
+      "provider": "ollama",
+      "description": "Basic single-provider Ollama local generation (simulated)",
+      "request": {
+        "prompt": "Hello, how are you?",
+        "system_prompt": null,
+        "model": "llama3.2:3b",
+        "temperature": 0.8,
+        "max_tokens": 512,
+        "top_p": 0.95,
+        "stop_sequences": null,
+        "request_id": "vec-004-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "ollama",
+        "reviewer_preference": null,
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "expected_response": {
+        "is_success": true,
+        "provider": "ollama",
+        "finish_reason_one_of": ["stop", "length"],
+        "request_id_echoed": true,
+        "content_min_length": 5,
+        "usage_keys_present": ["prompt_tokens", "completion_tokens", "total_tokens"],
+        "latency_gte": 0.0,
+        "error": null
+      }
+    },
+    {
+      "id": "vec-005",
+      "category": "fallback",
+      "provider": "openai",
+      "description": "Fallback: openai unavailable, falls back to gemini",
+      "request": {
+        "prompt": "What time do you open?",
+        "system_prompt": "You are a customer service agent.",
+        "model": "gpt-4o-mini",
+        "temperature": 0.8,
+        "max_tokens": 1024,
+        "top_p": 0.95,
+        "stop_sequences": null,
+        "request_id": "vec-005-req",
+        "metadata": {"language": "en", "fallback_chain": ["openai", "gemini", "mock"]},
+        "provider_preference": "openai",
+        "reviewer_preference": null,
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "simulated_condition": "openai returns connection error on all 3 attempts",
+      "expected_response": {
+        "is_success": true,
+        "provider_one_of": ["gemini", "mock"],
+        "finish_reason_one_of": ["stop", "length", "mock"],
+        "request_id_echoed": true,
+        "content_min_length": 10,
+        "error": null,
+        "metadata_contains": "fallback"
+      }
+    },
+    {
+      "id": "vec-006",
+      "category": "fallback",
+      "provider": "ollama",
+      "description": "Fallback: ollama not running, falls back to mock",
+      "request": {
+        "prompt": "Senaraikan 3 buah negeri di Malaysia.",
+        "system_prompt": null,
+        "model": "llama3.2:3b",
+        "temperature": 0.8,
+        "max_tokens": 512,
+        "top_p": 0.95,
+        "stop_sequences": null,
+        "request_id": "vec-006-req",
+        "metadata": {"language": "ms", "fallback_chain": ["ollama", "mock"]},
+        "provider_preference": "ollama",
+        "reviewer_preference": null,
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "simulated_condition": "ollama connection refused on all 3 attempts",
+      "expected_response": {
+        "is_success": true,
+        "provider": "mock",
+        "finish_reason": "mock",
+        "request_id_echoed": true,
+        "error": null
+      }
+    },
+    {
+      "id": "vec-007",
+      "category": "consensus",
+      "provider": "openai",
+      "description": "Consensus: openai generates, gemini reviews",
+      "request": {
+        "prompt": "Explain how eSIM activation works.",
+        "system_prompt": "You are a helpful telco assistant.",
+        "model": "gpt-4o-mini",
+        "temperature": 0.8,
+        "max_tokens": 1024,
+        "top_p": 0.95,
+        "stop_sequences": null,
+        "request_id": "vec-007-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "openai",
+        "reviewer_preference": "gemini",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "expected_response": {
+        "is_success": true,
+        "provider": "openai",
+        "request_id_echoed": true,
+        "content_min_length": 30,
+        "error": null,
+        "metadata_must_contain": {
+          "consensus.generator_provider": "openai",
+          "consensus.reviewer_provider": "gemini"
+        }
+      }
+    },
+    {
+      "id": "vec-008",
+      "category": "consensus",
+      "provider": "gemini",
+      "description": "Consensus: gemini generates, openai reviews",
+      "request": {
+        "prompt": "Rate this response quality from 1-5.",
+        "system_prompt": "You are a quality reviewer.",
+        "model": "gemini-2.0-flash",
+        "temperature": 0.0,
+        "max_tokens": 256,
+        "top_p": 1.0,
+        "stop_sequences": null,
+        "request_id": "vec-008-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "gemini",
+        "reviewer_preference": "openai",
+        "execution_mode": "sync",
+        "task_type": "review"
+      },
+      "expected_response": {
+        "is_success": true,
+        "provider": "gemini",
+        "request_id_echoed": true,
+        "content_min_length": 5,
+        "error": null,
+        "metadata_must_contain": {
+          "consensus.generator_provider": "gemini",
+          "consensus.reviewer_provider": "openai"
+        }
+      }
+    },
+    {
+      "id": "vec-009",
+      "category": "request_id",
+      "provider": "mock",
+      "description": "request_id propagation — provided ID echoed exactly",
+      "request": {
+        "prompt": "Ping test.",
+        "system_prompt": null,
+        "model": "buzz-mock-v1",
+        "temperature": 0.5,
+        "max_tokens": 64,
+        "top_p": 0.9,
+        "stop_sequences": null,
+        "request_id": "trace-abc-123-xyz",
+        "metadata": {"language": "en"},
+        "provider_preference": "mock",
+        "reviewer_preference": null,
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "expected_response": {
+        "is_success": true,
+        "request_id_exact": "trace-abc-123-xyz",
+        "provider": "mock"
+      }
+    },
+    {
+      "id": "vec-010",
+      "category": "request_id",
+      "provider": "mock",
+      "description": "request_id propagation — null ID gets auto-generated",
+      "request": {
+        "prompt": "Auto-id test.",
+        "system_prompt": null,
+        "model": "buzz-mock-v1",
+        "temperature": 0.8,
+        "max_tokens": 64,
+        "top_p": 0.95,
+        "stop_sequences": null,
+        "request_id": null,
+        "metadata": {"language": "en"},
+        "provider_preference": "mock",
+        "reviewer_preference": null,
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "expected_response": {
+        "is_success": true,
+        "request_id_not_null": true,
+        "request_id_starts_with": "mock-",
+        "provider": "mock"
+      }
+    },
+    {
+      "id": "vec-011",
+      "category": "task_type",
+      "provider": "mock",
+      "description": "task_type=generate dispatches correctly",
+      "request": {
+        "prompt": "Generate a greeting.",
+        "request_id": "vec-011-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "mock",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "expected_response": {
+        "is_success": true,
+        "provider": "mock"
+      }
+    },
+    {
+      "id": "vec-012",
+      "category": "task_type",
+      "provider": "mock",
+      "description": "task_type=review dispatches correctly",
+      "request": {
+        "prompt": "Review this output for accuracy.",
+        "request_id": "vec-012-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "mock",
+        "execution_mode": "sync",
+        "task_type": "review"
+      },
+      "expected_response": {
+        "is_success": true,
+        "provider": "mock"
+      }
+    },
+    {
+      "id": "vec-013",
+      "category": "task_type",
+      "provider": "mock",
+      "description": "task_type=score dispatches correctly",
+      "request": {
+        "prompt": "Score this from 1 to 10.",
+        "request_id": "vec-013-req",
+        "metadata": {"language": "ms"},
+        "provider_preference": "mock",
+        "execution_mode": "sync",
+        "task_type": "score"
+      },
+      "expected_response": {
+        "is_success": true,
+        "provider": "mock"
+      }
+    },
+    {
+      "id": "vec-014",
+      "category": "task_type",
+      "provider": "mock",
+      "description": "task_type=adversarial dispatches correctly",
+      "request": {
+        "prompt": "Try to trick the model.",
+        "request_id": "vec-014-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "mock",
+        "execution_mode": "sync",
+        "task_type": "adversarial"
+      },
+      "expected_response": {
+        "is_success": true,
+        "provider": "mock"
+      }
+    },
+    {
+      "id": "vec-015",
+      "category": "task_type",
+      "provider": "mock",
+      "description": "task_type=paraphrase dispatches correctly",
+      "request": {
+        "prompt": "Rephrase: The cat sat on the mat.",
+        "request_id": "vec-015-req",
+        "metadata": {"language": "mixed"},
+        "provider_preference": "mock",
+        "execution_mode": "sync",
+        "task_type": "paraphrase"
+      },
+      "expected_response": {
+        "is_success": true,
+        "provider": "mock"
+      }
+    },
+    {
+      "id": "vec-016",
+      "category": "usage",
+      "provider": "mock",
+      "description": "Token usage normalization — all three keys present, total = sum",
+      "request": {
+        "prompt": "Count my tokens please.",
+        "request_id": "vec-016-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "mock",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "expected_response": {
+        "is_success": true,
+        "usage_keys_present": ["prompt_tokens", "completion_tokens", "total_tokens"],
+        "usage_total_equals_sum": true,
+        "usage_all_non_negative": true,
+        "provider": "mock"
+      }
+    },
+    {
+      "id": "vec-017",
+      "category": "usage",
+      "provider": "openai",
+      "description": "Token usage normalization — openai returns exact counts",
+      "request": {
+        "prompt": "Two plus two equals?",
+        "model": "gpt-4o-mini",
+        "request_id": "vec-017-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "openai",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "expected_response": {
+        "is_success": true,
+        "usage_keys_present": ["prompt_tokens", "completion_tokens", "total_tokens"],
+        "usage_total_equals_sum": true,
+        "usage_prompt_tokens_gte": 1,
+        "usage_completion_tokens_gte": 1,
+        "provider": "openai"
+      }
+    },
+    {
+      "id": "vec-018",
+      "category": "latency",
+      "provider": "mock",
+      "description": "Latency is non-negative float milliseconds",
+      "request": {
+        "prompt": "Measure my latency.",
+        "request_id": "vec-018-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "mock",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "expected_response": {
+        "is_success": true,
+        "latency_gte": 0.0,
+        "latency_type": "float",
+        "provider": "mock"
+      }
+    },
+    {
+      "id": "vec-019",
+      "category": "latency",
+      "provider": "openai",
+      "description": "Latency reporting for remote provider — must be positive",
+      "request": {
+        "prompt": "Quick response please.",
+        "model": "gpt-4o-mini",
+        "request_id": "vec-019-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "openai",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "expected_response": {
+        "is_success": true,
+        "latency_gte": 0.0,
+        "latency_type": "float",
+        "provider": "openai"
+      }
+    },
+    {
+      "id": "vec-020",
+      "category": "not_configured",
+      "provider": "openai",
+      "description": "OpenAI not configured — returns clean error, no exception",
+      "request": {
+        "prompt": "This should fail gracefully.",
+        "model": "gpt-4o-mini",
+        "request_id": "vec-020-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "openai",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "simulated_condition": "OPENAI_API_KEY not set in environment",
+      "expected_response": {
+        "is_success": false,
+        "finish_reason": "error",
+        "content": "",
+        "error_contains": "not configured",
+        "request_id_echoed": true,
+        "provider_one_of": ["openai", "mock"]
+      }
+    },
+    {
+      "id": "vec-021",
+      "category": "not_configured",
+      "provider": "gemini",
+      "description": "Gemini not configured — returns clean error",
+      "request": {
+        "prompt": "This should also fail gracefully.",
+        "model": "gemini-2.0-flash",
+        "request_id": "vec-021-req",
+        "metadata": {"language": "ms"},
+        "provider_preference": "gemini",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "simulated_condition": "GEMINI_API_KEY not set in environment",
+      "expected_response": {
+        "is_success": false,
+        "finish_reason": "error",
+        "content": "",
+        "error_contains": "not configured",
+        "request_id_echoed": true,
+        "provider_one_of": ["gemini", "mock"]
+      }
+    },
+    {
+      "id": "vec-022",
+      "category": "unavailable",
+      "provider": "ollama",
+      "description": "Ollama server not running — connection refused",
+      "request": {
+        "prompt": "Hello from offline test.",
+        "model": "llama3.2:3b",
+        "request_id": "vec-022-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "ollama",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "simulated_condition": "Ollama daemon not running at 127.0.0.1:11434",
+      "expected_response": {
+        "is_success": false,
+        "finish_reason": "error",
+        "content": "",
+        "error_contains_one_of": ["connection", "refused", "not running", "unavailable"],
+        "request_id_echoed": true,
+        "provider": "ollama"
+      }
+    },
+    {
+      "id": "vec-023",
+      "category": "unavailable",
+      "provider": "openai",
+      "description": "OpenAI returns 503 service unavailable on all attempts",
+      "request": {
+        "prompt": "Service down test.",
+        "model": "gpt-4o-mini",
+        "request_id": "vec-023-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "openai",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "simulated_condition": "OpenAI returns HTTP 503 on all 3 attempts",
+      "expected_response": {
+        "is_success": false,
+        "finish_reason": "error",
+        "error_contains_one_of": ["503", "unavailable", "gateway", "server error"],
+        "request_id_echoed": true,
+        "provider": "openai",
+        "attempts_exhausted": true
+      }
+    },
+    {
+      "id": "vec-024",
+      "category": "rate_limit",
+      "provider": "openai",
+      "description": "OpenAI 429 rate limit — retried up to max_attempts=3",
+      "request": {
+        "prompt": "Rate-limited request.",
+        "model": "gpt-4o-mini",
+        "request_id": "vec-024-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "openai",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "simulated_condition": "OpenAI returns HTTP 429 on all 3 attempts",
+      "expected_response": {
+        "is_success": false,
+        "finish_reason": "error",
+        "error_contains_one_of": ["rate limit", "429", "too many requests"],
+        "request_id_echoed": true,
+        "provider": "openai",
+        "max_attempts_applied": 3
+      }
+    },
+    {
+      "id": "vec-025",
+      "category": "rate_limit",
+      "provider": "gemini",
+      "description": "Gemini RESOURCE_EXHAUSTED — retried up to max_attempts=3",
+      "request": {
+        "prompt": "Quota exhausted test.",
+        "model": "gemini-2.0-flash",
+        "request_id": "vec-025-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "gemini",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "simulated_condition": "Gemini returns RESOURCE_EXHAUSTED on all 3 attempts",
+      "expected_response": {
+        "is_success": false,
+        "finish_reason": "error",
+        "error_contains_one_of": ["rate limit", "resource_exhausted", "quota"],
+        "request_id_echoed": true,
+        "provider": "gemini",
+        "max_attempts_applied": 3
+      }
+    },
+    {
+      "id": "vec-026",
+      "category": "timeout",
+      "provider": "openai",
+      "description": "OpenAI request timeout after 120s — retried",
+      "request": {
+        "prompt": "Very slow request that will timeout.",
+        "model": "gpt-4o-mini",
+        "request_id": "vec-026-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "openai",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "simulated_condition": "OpenAI does not respond within timeout on all attempts",
+      "expected_response": {
+        "is_success": false,
+        "finish_reason": "error",
+        "error_contains_one_of": ["timeout", "timed out"],
+        "request_id_echoed": true,
+        "provider": "openai"
+      }
+    },
+    {
+      "id": "vec-027",
+      "category": "timeout",
+      "provider": "ollama",
+      "description": "Ollama request timeout — model loading too slow",
+      "request": {
+        "prompt": "Waiting for model load.",
+        "model": "llama3.1:70b",
+        "request_id": "vec-027-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "ollama",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "simulated_condition": "Ollama does not respond within 120s (model too large)",
+      "expected_response": {
+        "is_success": false,
+        "finish_reason": "error",
+        "error_contains_one_of": ["timeout", "timed out"],
+        "request_id_echoed": true,
+        "provider": "ollama"
+      }
+    },
+    {
+      "id": "vec-028",
+      "category": "invalid_model",
+      "provider": "openai",
+      "description": "Invalid model name — not retryable, clean error",
+      "request": {
+        "prompt": "Test with nonexistent model.",
+        "model": "gpt-99-turbo-nonexist",
+        "request_id": "vec-028-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "openai",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "simulated_condition": "OpenAI returns 404 model not found",
+      "expected_response": {
+        "is_success": false,
+        "finish_reason": "error",
+        "error_contains_one_of": ["model", "not found", "invalid", "does not exist"],
+        "request_id_echoed": true,
+        "provider": "openai",
+        "retryable": false
+      }
+    },
+    {
+      "id": "vec-029",
+      "category": "invalid_model",
+      "provider": "ollama",
+      "description": "Ollama model not pulled — not retryable",
+      "request": {
+        "prompt": "Use a model that does not exist locally.",
+        "model": "nonexistent-model:latest",
+        "request_id": "vec-029-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "ollama",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "simulated_condition": "Ollama returns model not found error",
+      "expected_response": {
+        "is_success": false,
+        "finish_reason": "error",
+        "error_contains_one_of": ["model", "not found", "pull"],
+        "request_id_echoed": true,
+        "provider": "ollama",
+        "retryable": false
+      }
+    },
+    {
+      "id": "vec-030",
+      "category": "clean_error",
+      "provider": "mock",
+      "description": "Empty prompt — validation error returned as ProviderResponse",
+      "request": {
+        "prompt": "",
+        "request_id": "vec-030-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "mock",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "expected_response": {
+        "is_success": false,
+        "finish_reason": "error",
+        "content": "",
+        "error_contains": "validation failed",
+        "request_id_echoed": true,
+        "no_exception_raised": true
+      }
+    },
+    {
+      "id": "vec-031",
+      "category": "clean_error",
+      "provider": "mock",
+      "description": "Invalid temperature — validation error, no crash",
+      "request": {
+        "prompt": "Valid prompt but bad temp.",
+        "temperature": 5.0,
+        "request_id": "vec-031-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "mock",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "expected_response": {
+        "is_success": false,
+        "finish_reason": "error",
+        "error_contains": "temperature",
+        "request_id_echoed": true,
+        "no_exception_raised": true
+      }
+    },
+    {
+      "id": "vec-032",
+      "category": "clean_error",
+      "provider": "mock",
+      "description": "Invalid execution_mode — validation error",
+      "request": {
+        "prompt": "Valid prompt, bad mode.",
+        "request_id": "vec-032-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "mock",
+        "execution_mode": "streaming",
+        "task_type": "generate"
+      },
+      "expected_response": {
+        "is_success": false,
+        "finish_reason": "error",
+        "error_contains": "execution_mode",
+        "request_id_echoed": true,
+        "no_exception_raised": true
+      }
+    },
+    {
+      "id": "vec-033",
+      "category": "clean_error",
+      "provider": "mock",
+      "description": "Invalid task_type — validation error",
+      "request": {
+        "prompt": "Valid prompt, bad task type.",
+        "request_id": "vec-033-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "mock",
+        "execution_mode": "sync",
+        "task_type": "summarize"
+      },
+      "expected_response": {
+        "is_success": false,
+        "finish_reason": "error",
+        "error_contains": "task_type",
+        "request_id_echoed": true,
+        "no_exception_raised": true
+      }
+    },
+    {
+      "id": "vec-034",
+      "category": "clean_error",
+      "provider": "openai",
+      "description": "OpenAI auth failure (401) — not retried, clean error",
+      "request": {
+        "prompt": "Auth will fail.",
+        "model": "gpt-4o-mini",
+        "request_id": "vec-034-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "openai",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "simulated_condition": "OpenAI returns HTTP 401 Unauthorized",
+      "expected_response": {
+        "is_success": false,
+        "finish_reason": "error",
+        "error_contains_one_of": ["unauthorized", "invalid", "api key", "401"],
+        "request_id_echoed": true,
+        "provider": "openai",
+        "retryable": false,
+        "no_exception_raised": true
+      }
+    },
+    {
+      "id": "vec-035",
+      "category": "clean_error",
+      "provider": "gemini",
+      "description": "Gemini safety block — not retried, clean error",
+      "request": {
+        "prompt": "Content that triggers safety filter.",
+        "model": "gemini-2.0-flash",
+        "request_id": "vec-035-req",
+        "metadata": {"language": "en"},
+        "provider_preference": "gemini",
+        "execution_mode": "sync",
+        "task_type": "generate"
+      },
+      "simulated_condition": "Gemini blocks response with SAFETY finish_reason",
+      "expected_response": {
+        "is_success": false,
+        "finish_reason": "error",
+        "error_contains_one_of": ["safety", "blocked", "content filter"],
+        "request_id_echoed": true,
+        "provider": "gemini",
+        "retryable": false,
+        "no_exception_raised": true
+      }
+    }
+  ]
+}

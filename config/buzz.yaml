@@ -1,0 +1,109 @@
+# ============================================================================
+# SPATHODEA R4 FASTLAB — BUZZ Gateway Configuration
+# ============================================================================
+# The BUZZ gateway abstracts LLM provider interactions behind a unified
+# interface. It supports three operational modes:
+#
+#   mock       — Returns deterministic synthetic responses (no network, no API)
+#   local_http — Sends requests to a local HTTP endpoint (e.g. Ollama, vLLM)
+#   local_cli  — Invokes a local CLI binary (e.g. llama.cpp, ollama CLI)
+#
+# Default: mock (safe for CI, testing, and offline development)
+# ============================================================================
+
+buzz:
+  version: "0.2.0"
+
+  # --- Active Mode ---
+  # Options: mock | local_http | local_cli
+  mode: "mock"
+
+  # --- Contract v0.2.0 Endpoint ---
+  endpoint:
+    host: "127.0.0.1"
+    port: 8765
+    generate_path: "/v1/generate"
+    health_path: "/health"
+    # SECURITY: localhost-only binding. Never expose externally.
+
+  # --- Provider Preferences (v0.2.0) ---
+  provider_preference: null     # Preferred provider for generation (null = use mode default)
+  reviewer_preference: null     # Preferred provider for review/scoring
+
+  # --- Execution Mode (v0.2.0) ---
+  # Options: sync | async | batch
+  execution_mode: "sync"
+
+  # --- Retry & Resilience (v0.2.0: total max attempts = 3) ---
+  retry:
+    max_attempts: 3               # Total attempts (1 initial + 2 retries)
+    backoff_base_seconds: 1.0
+    backoff_max_seconds: 30.0
+    retry_on_error: true
+
+  # =========================================================================
+  # MODE: mock
+  # =========================================================================
+  # Returns pre-built or deterministic responses without any external calls.
+  # Used for pipeline testing, CI, and schema validation.
+  mock:
+    enabled: true
+    model_name: "buzz-mock-v1"
+    latency_ms: 50            # Simulated latency per request
+    token_multiplier: 1.3     # output tokens ≈ input_words * multiplier
+    deterministic: true       # Same prompt → same response (seeded)
+    seed: 42
+    response_style: "helpful" # helpful | terse | verbose | adversarial
+    languages:
+      - "en"
+      - "ms"
+      - "mixed"
+    max_output_tokens: 2048
+    error_rate: 0.0           # Fraction of requests that simulate failure (0.0–1.0)
+
+  # =========================================================================
+  # MODE: local_http
+  # =========================================================================
+  # Connects to a locally-running HTTP-compatible LLM server.
+  # Compatible with: Ollama (/api/generate), vLLM, llama.cpp server, LocalAI
+  local_http:
+    enabled: false
+    base_url: "http://localhost:11434"
+    endpoint: "/api/generate"    # Ollama-style endpoint
+    model_name: "llama3.2:3b"
+    timeout_seconds: 120
+    headers: {}
+    # NOTE: No API keys — local only. Never add auth tokens here.
+
+  # =========================================================================
+  # MODE: local_cli
+  # =========================================================================
+  # Invokes a local binary via subprocess for inference.
+  # Compatible with: ollama CLI, llama.cpp main, mlx_lm
+  local_cli:
+    enabled: false
+    binary: "ollama"
+    command_template: "{binary} run {model} \"{prompt}\""
+    model_name: "llama3.2:3b"
+    timeout_seconds: 180
+    working_directory: null   # null = current directory
+    # NOTE: No API keys — local only. Never add auth tokens here.
+
+  # =========================================================================
+  # Generation Defaults (shared across all modes)
+  # =========================================================================
+  generation_defaults:
+    temperature: 0.8
+    max_tokens: 2048
+    top_p: 0.95
+    stop_sequences: null
+
+  # =========================================================================
+  # Logging
+  # =========================================================================
+  logging:
+    log_requests: true
+    log_responses: true
+    log_latency: true
+    log_directory: "logs/buzz/"
+    redact_content: false     # Set true to omit prompt/response text from logs

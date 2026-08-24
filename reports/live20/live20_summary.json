@@ -1,0 +1,439 @@
+{
+  "mode": "dry-run",
+  "timestamp": "2026-08-24T07:29:28.229682+00:00",
+  "contract_version": "0.2.0",
+  "base_url": "http://127.0.0.1:8765",
+  "provider": "auto",
+  "reviewer": "none",
+  "execution_mode": "single",
+  "total_records": 20,
+  "valid_requests": 20,
+  "invalid_requests": 0,
+  "network_calls": 0,
+  "results": [
+    {
+      "record_id": "live20-001",
+      "request_valid": true,
+      "provider_preference": "openai",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 140,
+      "metadata": {
+        "record_id": "live20-001",
+        "language": "ms",
+        "difficulty": "medium",
+        "tags": [
+          "bahasa_melayu",
+          "banking",
+          "procedural"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-002",
+      "request_valid": true,
+      "provider_preference": "openai",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 216,
+      "metadata": {
+        "record_id": "live20-002",
+        "language": "en",
+        "difficulty": "medium",
+        "tags": [
+          "english",
+          "finance",
+          "comparison"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-003",
+      "request_valid": true,
+      "provider_preference": "openai",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 147,
+      "metadata": {
+        "record_id": "live20-003",
+        "language": "mixed",
+        "difficulty": "medium",
+        "tags": [
+          "code_switch",
+          "banking",
+          "casual_tone"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-004",
+      "request_valid": true,
+      "provider_preference": "openai",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 149,
+      "metadata": {
+        "record_id": "live20-004",
+        "language": "ms",
+        "difficulty": "hard",
+        "tags": [
+          "slang",
+          "sms_style",
+          "insurance",
+          "urgent"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-005",
+      "request_valid": true,
+      "provider_preference": "gemini",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 65,
+      "metadata": {
+        "record_id": "live20-005",
+        "language": "en",
+        "difficulty": "easy",
+        "tags": [
+          "typo",
+          "noisy_input",
+          "mobile_banking"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-006",
+      "request_valid": true,
+      "provider_preference": "openai",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 50,
+      "metadata": {
+        "record_id": "live20-006",
+        "language": "en",
+        "difficulty": "medium",
+        "tags": [
+          "incomplete_request",
+          "ambiguity",
+          "clarification"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-007",
+      "request_valid": true,
+      "provider_preference": "openai",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 228,
+      "metadata": {
+        "record_id": "live20-007",
+        "language": "en",
+        "difficulty": "hard",
+        "tags": [
+          "ambiguous_request",
+          "consumer_rights",
+          "contradiction"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-008",
+      "request_valid": true,
+      "provider_preference": "openai",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 214,
+      "metadata": {
+        "record_id": "live20-008",
+        "language": "en",
+        "difficulty": "hard",
+        "tags": [
+          "contradictory_instructions",
+          "logical_constraint"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-009",
+      "request_valid": true,
+      "provider_preference": "openai",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 201,
+      "metadata": {
+        "record_id": "live20-009",
+        "language": "en",
+        "difficulty": "hard",
+        "tags": [
+          "factual_trap",
+          "misinformation_correction",
+          "banking"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-010",
+      "request_valid": true,
+      "provider_preference": "openai",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 187,
+      "metadata": {
+        "record_id": "live20-010",
+        "language": "en",
+        "difficulty": "hard",
+        "tags": [
+          "reasoning",
+          "math",
+          "compound_interest"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-011",
+      "request_valid": true,
+      "provider_preference": "openai",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 311,
+      "metadata": {
+        "record_id": "live20-011",
+        "language": "en",
+        "difficulty": "hard",
+        "tags": [
+          "coding",
+          "python",
+          "validation",
+          "malaysia_ic"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-012",
+      "request_valid": true,
+      "provider_preference": "gemini",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 217,
+      "metadata": {
+        "record_id": "live20-012",
+        "language": "en",
+        "difficulty": "medium",
+        "tags": [
+          "structured_output",
+          "json",
+          "strict_format"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-013",
+      "request_valid": true,
+      "provider_preference": "openai",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 530,
+      "metadata": {
+        "record_id": "live20-013",
+        "language": "ms",
+        "difficulty": "medium",
+        "tags": [
+          "summarization",
+          "bahasa_melayu",
+          "economics"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-014",
+      "request_valid": true,
+      "provider_preference": "gemini",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 278,
+      "metadata": {
+        "record_id": "live20-014",
+        "language": "en",
+        "difficulty": "easy",
+        "tags": [
+          "classification",
+          "intent_detection",
+          "single_label"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-015",
+      "request_valid": true,
+      "provider_preference": "openai",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 309,
+      "metadata": {
+        "record_id": "live20-015",
+        "language": "en",
+        "difficulty": "medium",
+        "tags": [
+          "instruction_following",
+          "email",
+          "formal",
+          "multi_constraint"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-016",
+      "request_valid": true,
+      "provider_preference": "openai",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 474,
+      "metadata": {
+        "record_id": "live20-016",
+        "language": "en",
+        "difficulty": "hard",
+        "tags": [
+          "long_context",
+          "multi_step_math",
+          "loan_calculation"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-017",
+      "request_valid": true,
+      "provider_preference": "openai",
+      "reviewer_preference": null,
+      "task_type": "adversarial",
+      "execution_mode": "sync",
+      "prompt_length": 222,
+      "metadata": {
+        "record_id": "live20-017",
+        "language": "en",
+        "difficulty": "hard",
+        "tags": [
+          "safety",
+          "refusal",
+          "prompt_injection",
+          "jailbreak"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-018",
+      "request_valid": true,
+      "provider_preference": "openai",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 41,
+      "metadata": {
+        "record_id": "live20-018",
+        "language": "en",
+        "difficulty": "easy",
+        "tags": [
+          "near_duplicate",
+          "common_query",
+          "dedup_test"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-019",
+      "request_valid": true,
+      "provider_preference": "openai",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 226,
+      "metadata": {
+        "record_id": "live20-019",
+        "language": "mixed",
+        "difficulty": "hard",
+        "tags": [
+          "context_switching",
+          "multi_topic",
+          "mixed_language"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    },
+    {
+      "record_id": "live20-020",
+      "request_valid": true,
+      "provider_preference": "openai",
+      "reviewer_preference": null,
+      "task_type": "generate",
+      "execution_mode": "sync",
+      "prompt_length": 473,
+      "metadata": {
+        "record_id": "live20-020",
+        "language": "ms",
+        "difficulty": "hard",
+        "tags": [
+          "multi_step",
+          "business",
+          "comprehensive",
+          "bahasa_melayu"
+        ],
+        "source": "FASTLAB_LIVE20"
+      },
+      "validation_errors": []
+    }
+  ]
+}

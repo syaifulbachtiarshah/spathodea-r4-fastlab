@@ -1,0 +1,47 @@
+{
+  "status": "complete",
+  "total_records": 3,
+  "coverage": {
+    "languages": {
+      "en": 1,
+      "unknown": 2
+    },
+    "difficulties": {
+      "medium": 1,
+      "unknown": 2
+    },
+    "intents": {
+      "product_inquiry": 1,
+      "unknown": 2
+    },
+    "unique_intents": 2,
+    "has_system_prompt": 1,
+    "has_quality_score": 0
+  },
+  "lengths": {
+    "input": {
+      "mean": 23.666666666666668,
+      "min": 0,
+      "max": 71,
+      "median": 0
+    },
+    "output": {
+      "mean": 177.0,
+      "min": 0,
+      "max": 531,
+      "median": 0
+    }
+  },
+  "quality": {},
+  "distributions": {
+    "language_pct": {
+      "en": 0.3333333333333333,
+      "unknown": 0.6666666666666666
+    },
+    "difficulty_pct": {
+      "medium": 0.3333333333333333,
+      "unknown": 0.6666666666666666
+    }
+  },
+  "source": "/projects/sandbox/spathodea-r4-fastlab/datasets/test"
+}

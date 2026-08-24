@@ -1,0 +1,59 @@
+# ============================================================================
+# SPATHODEA R4 FASTLAB — Provider Configuration
+# ============================================================================
+# Configures LLM API providers for synthetic data generation and evaluation.
+# API keys are NEVER stored here — use .env file or environment variables.
+# ============================================================================
+
+providers:
+  openai:
+    name: "OpenAI"
+    enabled: false  # Set to true when API key is configured
+    env_key: "OPENAI_API_KEY"
+    base_url: null  # Uses default
+    models:
+      generator: "gpt-4o-mini"
+      reviewer: "gpt-4o"
+      judge: "gpt-4o"
+    rate_limits:
+      max_requests_per_minute: 60
+      max_tokens_per_minute: 100000
+    timeout: 60
+
+  gemini:
+    name: "Google Gemini"
+    enabled: false  # Set to true when API key is configured
+    env_key: "GEMINI_API_KEY"
+    base_url: null
+    models:
+      generator: "gemini-2.0-flash"
+      reviewer: "gemini-2.0-flash"
+      judge: "gemini-2.0-flash"
+    rate_limits:
+      max_requests_per_minute: 30
+      max_tokens_per_minute: 50000
+    timeout: 60
+
+  local:
+    name: "Local / Ollama"
+    enabled: false
+    env_key: null
+    base_url: "http://localhost:11434/v1"
+    models:
+      generator: "llama3.2:3b"
+      reviewer: "llama3.2:3b"
+      judge: "llama3.2:3b"
+    rate_limits:
+      max_requests_per_minute: 120
+      max_tokens_per_minute: 999999
+    timeout: 120
+
+# --- Provider Selection ---
+default_provider: "openai"
+
+# --- Retry Configuration ---
+retry:
+  max_retries: 3
+  backoff_base: 2.0
+  backoff_max: 60.0
+  retry_on_status: [429, 500, 502, 503, 504]

@@ -1,0 +1,72 @@
+# ============================================================================
+# SPATHODEA R4 FASTLAB — Git Ignore
+# ============================================================================
+
+# --- Secrets ---
+.env
+*.env
+.env.*
+!.env.example
+credentials/
+secrets/
+*.key
+*.pem
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# --- Virtual environments ---
+venv/
+.venv/
+env/
+ENV/
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# --- Generated data (large files) ---
+generated/raw/*.jsonl
+generated/accepted/*.jsonl
+generated/rejected/*.jsonl
+datasets/train/*.jsonl
+datasets/validation/*.jsonl
+datasets/test/*.jsonl
+datasets/hidden_test/*.jsonl
+
+# Keep directory structure
+!generated/raw/.gitkeep
+!generated/accepted/.gitkeep
+!generated/rejected/.gitkeep
+!datasets/train/.gitkeep
+!datasets/validation/.gitkeep
+!datasets/test/.gitkeep
+!datasets/hidden_test/.gitkeep
+
+# --- Logs ---
+logs/
+!logs/.gitkeep
+
+# --- Reports (optional: may want to commit some) ---
+reports/*.html
+
+# --- Caches ---
+.cache/
+*.pkl
+*.npy
+
+# --- OS ---
+Thumbs.db
+.DS_Store

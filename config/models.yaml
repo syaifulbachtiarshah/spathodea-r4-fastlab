@@ -1,0 +1,79 @@
+# ============================================================================
+# SPATHODEA R4 FASTLAB — Models Configuration
+# ============================================================================
+# Defines base models we may target for fine-tuning.
+# These are reference entries — the actual competition model will be confirmed.
+# ============================================================================
+
+models:
+  # --- Primary Candidates (SageMaker Serverless Model Customization) ---
+  meta_llama_3_2_3b:
+    provider: "meta"
+    name: "Llama 3.2 3B Instruct"
+    model_id: "meta-llama/Llama-3.2-3B-Instruct"
+    parameters: "3B"
+    variant: "instruct"
+    context_window: 131072
+    fine_tuning:
+      sft: true
+      dpo: true
+      rlvr: true
+      lora: true
+      fft: true
+    notes: "Lightweight, ideal for edge/competition with limited compute"
+
+  meta_llama_3_1_8b:
+    provider: "meta"
+    name: "Llama 3.1 8B Instruct"
+    model_id: "meta-llama/Llama-3.1-8B-Instruct"
+    parameters: "8B"
+    variant: "instruct"
+    context_window: 131072
+    fine_tuning:
+      sft: true
+      dpo: true
+      rlvr: true
+      lora: true
+      fft: true
+    notes: "Strong general-purpose model, well-supported on SageMaker"
+
+  mistral_7b:
+    provider: "mistral"
+    name: "Mistral 7B Instruct"
+    model_id: "mistralai/Mistral-7B-Instruct-v0.3"
+    parameters: "7B"
+    variant: "instruct"
+    context_window: 32768
+    fine_tuning:
+      sft: true
+      dpo: true
+      rlvr: false
+      lora: true
+      fft: true
+    notes: "Efficient architecture with grouped-query attention"
+
+  qwen_3_5:
+    provider: "alibaba"
+    name: "Qwen 3.5"
+    model_id: "Qwen/Qwen3.5-7B"
+    parameters: "7B"
+    variant: "chat"
+    context_window: 32768
+    fine_tuning:
+      sft: true
+      dpo: true
+      rlvr: true
+      lora: true
+      fft: false
+    notes: "Announced Apr 2026 for SageMaker serverless customization"
+
+# --- Default Selection ---
+default_target: "meta_llama_3_2_3b"
+competition_model: null  # Will be set once competition confirms
+
+# --- Token Limits (conservative estimates) ---
+token_limits:
+  max_input_tokens: 4096
+  max_output_tokens: 4096
+  max_total_tokens: 8192
+  tokenizer: "auto"  # Will use model-specific tokenizer

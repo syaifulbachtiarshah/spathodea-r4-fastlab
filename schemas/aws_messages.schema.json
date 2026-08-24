@@ -1,0 +1,52 @@
+{
+  "title": "AWS SageMaker SFT — Conversational (messages) Format",
+  "description": "Export schema for SageMaker serverless model customization SFT jobs using the Conversational format. One JSON object per line in a .jsonl file. Each object contains a messages array with role/content pairs.",
+  "version": "0.1.0",
+  "type": "object",
+  "required": ["messages"],
+  "additionalProperties": false,
+  "properties": {
+    "messages": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["role", "content"],
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": ["system", "user", "assistant"],
+            "description": "The role of the message sender"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The message content"
+          }
+        }
+      }
+    }
+  },
+  "_constraints": {
+    "message_order": "system (optional, first) -> user -> assistant (must alternate, end with assistant)",
+    "min_messages": "At least one user message and one assistant message required",
+    "system_position": "If present, system message must be the first message",
+    "last_message_role": "Last message must have role 'assistant'"
+  },
+  "_examples": [
+    {
+      "messages": [
+        {"role": "user", "content": "How do I reset my password?"},
+        {"role": "assistant", "content": "To reset your password, go to Settings > Security > Change Password."}
+      ]
+    },
+    {
+      "messages": [
+        {"role": "system", "content": "You are a helpful bilingual assistant for Malaysian users."},
+        {"role": "user", "content": "Boleh explain pasal data plan yang murah?"},
+        {"role": "assistant", "content": "Plan paling murah kami ialah Plan Asas RM29/bulan dengan 8GB data dan unlimited calls."}
+      ]
+    }
+  ]
+}

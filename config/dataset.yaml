@@ -1,0 +1,116 @@
+# ============================================================================
+# SPATHODEA R4 FASTLAB — Dataset Configuration
+# ============================================================================
+# Controls dataset generation, validation, balancing, and splitting.
+# ============================================================================
+
+dataset:
+  version: "0.1.0"
+  name: "spathodea-r4"
+  format: "jsonl"
+  encoding: "utf-8"
+
+  # --- Scale Targets ---
+  targets:
+    minimum: 10000
+    stretch: 100000
+    phase1_test: 20  # Current phase: just pipeline testing
+
+  # --- Language Distribution ---
+  languages:
+    en:
+      name: "English"
+      target_ratio: 0.50
+    ms:
+      name: "Bahasa Melayu"
+      target_ratio: 0.40
+    mixed:
+      name: "Code-switched (EN/MS)"
+      target_ratio: 0.10
+  language_tolerance: 0.05
+
+  # --- Difficulty Distribution ---
+  difficulty:
+    easy:
+      target_ratio: 0.20
+      description: "Clear, unambiguous, single-step"
+    medium:
+      target_ratio: 0.35
+      description: "Moderate complexity, multi-step"
+    hard:
+      target_ratio: 0.25
+      description: "Complex reasoning, domain expertise"
+    adversarial:
+      target_ratio: 0.15
+      description: "Tricky, edge cases, traps"
+    noisy:
+      target_ratio: 0.05
+      description: "Typos, slang, incomplete"
+  difficulty_tolerance: 0.05
+
+  # --- Noise Types ---
+  noise_types:
+    - "typo"
+    - "sms_abbreviation"
+    - "missing_punctuation"
+    - "mixed_case"
+    - "colloquial_malay"
+    - "informal_english"
+    - "incomplete_sentence"
+
+  # --- Persona Types ---
+  personas:
+    - "general_user"
+    - "technical_user"
+    - "elderly_user"
+    - "student"
+    - "business_professional"
+    - "non_native_speaker"
+
+  # --- Validation Rules ---
+  validation:
+    max_input_length: 4096
+    max_output_length: 8192
+    min_input_length: 5
+    min_output_length: 10
+    require_id: true
+    require_input: true
+    require_output: true
+    require_metadata: true
+    reject_empty_strings: true
+    reject_control_chars: true
+
+  # --- Deduplication ---
+  deduplication:
+    exact:
+      enabled: true
+      normalize: true
+      fields: ["input", "output"]
+    semantic:
+      enabled: false  # Requires embedding model — Phase 2
+      threshold: 0.92
+      model: null
+
+  # --- Splitting ---
+  splitting:
+    train_ratio: 0.80
+    validation_ratio: 0.10
+    test_ratio: 0.10
+    hidden_test_ratio: 0.00  # Reserved for future use
+    shuffle: true
+    seed: 42
+    stratify_by:
+      - "language"
+      - "difficulty"
+      - "intent"
+
+  # --- Quality Scoring ---
+  quality:
+    min_acceptable_score: 0.70
+    scoring_method: "rule_based"  # rule_based | llm_judge | hybrid
+    dimensions:
+      completeness: 0.25
+      coherence: 0.30
+      relevance: 0.20
+      naturalness: 0.15
+      difficulty_alignment: 0.10

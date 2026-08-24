@@ -1,0 +1,35 @@
+{
+  "title": "AWS SageMaker SFT — Standard (prompt/completion) Format",
+  "description": "Export schema for SageMaker serverless model customization SFT jobs using the Standard format. One JSON object per line in a .jsonl file.",
+  "version": "0.1.0",
+  "type": "object",
+  "required": ["prompt", "completion"],
+  "additionalProperties": false,
+  "properties": {
+    "prompt": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The user input / instruction text"
+    },
+    "completion": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The expected model response"
+    },
+    "system": {
+      "type": "string",
+      "description": "Optional system prompt (some models support this field)"
+    }
+  },
+  "_examples": [
+    {
+      "prompt": "How do I reset my password?",
+      "completion": "To reset your password, go to Settings > Security > Change Password. Enter your current password and then your new password twice to confirm."
+    },
+    {
+      "system": "You are a helpful customer service assistant.",
+      "prompt": "Macam mana nak check baki prepaid?",
+      "completion": "Untuk semak baki prepaid anda, sila dail *124# dari telefon anda atau gunakan aplikasi MyApp."
+    }
+  ]
+}

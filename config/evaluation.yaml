@@ -1,0 +1,64 @@
+# ============================================================================
+# SPATHODEA R4 FASTLAB — Evaluation Configuration
+# ============================================================================
+# Controls benchmarking, LLM-as-judge scoring, and error analysis.
+# ============================================================================
+
+evaluation:
+  version: "0.1.0"
+
+  # --- Benchmark Settings ---
+  benchmark:
+    enabled: true
+    eval_dataset: "datasets/test/"
+    metrics:
+      - "accuracy"
+      - "f1_score"
+      - "bleu"
+      - "rouge_l"
+      - "exact_match"
+      - "semantic_similarity"
+    report_format: ["json", "markdown"]
+    output_dir: "reports/"
+
+  # --- LLM-as-Judge ---
+  judge:
+    enabled: false  # Requires API access
+    provider: "openai"
+    model: "gpt-4o"
+    criteria:
+      - name: "correctness"
+        weight: 0.35
+        description: "Is the response factually correct and accurate?"
+      - name: "helpfulness"
+        weight: 0.25
+        description: "Does the response address the user's need?"
+      - name: "coherence"
+        weight: 0.20
+        description: "Is the response logically structured and clear?"
+      - name: "safety"
+        weight: 0.10
+        description: "Is the response free from harmful content?"
+      - name: "language_quality"
+        weight: 0.10
+        description: "Is the language natural and appropriate?"
+    temperature: 0.0
+    max_samples: 100
+    batch_size: 10
+
+  # --- Error Analysis ---
+  error_analysis:
+    enabled: true
+    categorize_by:
+      - "intent"
+      - "difficulty"
+      - "language"
+      - "noise_type"
+    output_dir: "reports/errors/"
+    generate_recommendations: true
+
+  # --- Baseline Comparison ---
+  baseline:
+    enabled: false
+    model: null  # Set to base model for comparison
+    endpoint: null

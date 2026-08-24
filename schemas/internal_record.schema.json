@@ -1,0 +1,101 @@
+{
+  "title": "SPATHODEA R4 Internal Master Record",
+  "description": "Internal representation of a training record. This format is independent of any AWS/competition export format. Records are stored in this format and converted to target formats on export.",
+  "version": "0.1.0",
+  "type": "object",
+  "required": ["id", "input", "output", "metadata"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^r4-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "description": "Unique record identifier: r4-{uuid4}"
+    },
+    "input": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 4096,
+      "description": "User input / query / instruction"
+    },
+    "output": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 8192,
+      "description": "Expected model response / completion"
+    },
+    "system_prompt": {
+      "type": ["string", "null"],
+      "maxLength": 2048,
+      "description": "Optional system-level instruction context"
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["intent", "difficulty", "language", "generator"],
+      "additionalProperties": true,
+      "properties": {
+        "intent": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Task intent / category from taxonomy"
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["easy", "medium", "hard", "adversarial", "noisy"],
+          "description": "Difficulty classification"
+        },
+        "language": {
+          "type": "string",
+          "enum": ["en", "ms", "mixed"],
+          "description": "Primary language of the record"
+        },
+        "persona": {
+          "type": ["string", "null"],
+          "description": "Simulated user persona type"
+        },
+        "noise_type": {
+          "type": ["string", "null"],
+          "description": "Type of noise injected (null if clean)"
+        },
+        "generator": {
+          "type": "string",
+          "description": "Which system/model produced this record"
+        },
+        "generation_batch": {
+          "type": ["string", "null"],
+          "description": "Batch identifier for traceability"
+        },
+        "seed_id": {
+          "type": ["string", "null"],
+          "description": "Parent seed record ID if derived"
+        },
+        "quality_score": {
+          "type": ["number", "null"],
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Composite quality score (null if unscored)"
+        },
+        "quality_dimensions": {
+          "type": ["object", "null"],
+          "description": "Breakdown by scoring dimension",
+          "properties": {
+            "completeness": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            "coherence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            "relevance": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            "naturalness": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+            "difficulty_alignment": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+          }
+        },
+        "created_at": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "ISO-8601 creation timestamp"
+        },
+        "tags": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Freeform tags"
+        }
+      }
+    }
+  }
+}
