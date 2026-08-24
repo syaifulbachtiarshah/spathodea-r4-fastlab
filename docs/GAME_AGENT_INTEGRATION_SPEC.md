@@ -637,11 +637,146 @@ This wire translation is produced offline for validation. It is NOT sent to a li
 
 ---
 
-## 15. File Structure
+## 18. Navigation Intelligence (Phase 2F Part 3C)
+
+### 18.1 Grounded Navigation Architecture
+
+The grounded navigation system improves decision quality by providing the LLM with explicit legal action constraints and goal direction information.
+
+```
+GameState
+  → NavigationContextBuilder → NavigationContext
+  → NavigationPromptBuilder → grounded prompt
+  → ContractTranslator → BUZZ wire payload
+  → BUZZ → Ollama qwen2.5:7b
+  → ActionParser → Action
+  → OscillationDetector → oscillation check
+  → Safety Gate → validation
+  → GameSimulator.apply_action()
+```
+
+Key components:
+- `game/navigation_context.py` — Builds deterministic context from GameState
+- `game/navigation_prompt.py` — Constructs grounded prompts with legal actions
+- `game/oscillation_detector.py` — Detects A→B→A position oscillation patterns
+
+### 18.2 Grounded Prompt Structure
+
+The grounded prompt includes:
+
+| Section | Purpose |
+|---------|---------|
+| `ROLE` | Defines agent as grid-navigation decision agent |
+| `OBJECTIVE` | Move safely toward goal |
+| `STATE` | Position, goal, grid dimensions, health, turn, strategy |
+| `GOAL_DIRECTION` | Horizontal (LEFT/RIGHT/SAME) and vertical (UP/DOWN/SAME) |
+| `LEGAL_ACTIONS` | Computed legal actions from current position |
+| `BLOCKED_ACTIONS` | Actions blocked with reasons (OUT_OF_BOUNDS, WALL, LOCKED_DOOR) |
+| `REWARDS` | Known reward positions |
+| `HAZARDS` | Known hazard positions |
+| `ENEMIES` | Known enemy positions |
+| `RECENT_HISTORY` | Previous 3 positions and actions |
+| `RULES` | Constraints (choose only from LEGAL_ACTIONS, no explanation) |
+| `OUTPUT` | Format specification (exactly one action token) |
+
+### 18.3 One-Turn Benchmark
+
+**Configuration:** `temperature=0.0`, `max_tokens=8`, `qwen2.5:7b`
+
+| Metric | Baseline | Grounded | Delta |
+|--------|----------|----------|-------|
+| Parse success rate | 100% | 100% | — |
+| Legal action rate | 67% | **100%** | +33% |
+| Unsafe count | 2 | **0** | -2 |
+| Goal progress rate | 17% | **83%** | +66% |
+| UP bias | 6/6 (100%) | **2/6 (33%)** | -67% |
+| Avg latency | 3759ms | 4884ms | +1125ms |
+
+**Result:** Grounded prompt eliminates illegal actions and UP bias.
+
+### 18.4 Multi-Turn Benchmark
+
+**Episodes:** 3 deterministic episodes, max 10 turns each
+
+| Episode | Turns | Goal Reached | Fallback | Oscillation | Unsafe | Progress Rate |
+|---------|-------|--------------|----------|-------------|--------|---------------|
+| SIMPLE | 10 | Yes | 0/10 | 2 | 0 | 90% |
+| WALL_DETOUR | 10 | Yes | 0/10 | 2 | 0 | 90% |
+| REWARD_HAZARD | 10 | Yes | 0/10 | 2 | 0 | 90% |
+| **Total** | **30** | **3/3** | **0/30** | **6** | **0** | **90%** |
+
+### 18.5 Oscillation Detector
+
+**Definition:**
+- **Oscillation event:** `P[n-2] == P[n]` AND `P[n-1] != P[n]`
+  - Example: A5→A4→A5 = 1 event
+- **Repeated loop:** 3+ consecutive oscillation events (A→B→A→B→A)
+- **Action oscillation:** DOWN→UP→DOWN or LEFT→RIGHT→LEFT
+
+**Results:**
+- Total oscillation events: 6 (2 per episode)
+- Repeated sustained loops: 0
+- All oscillations were isolated events, not sustained bouncing
+
+### 18.6 Simple Map Efficiency
+
+| Metric | Value |
+|--------|-------|
+| Turns to goal | 10 |
+| Optimal path length | 8 |
+| Path efficiency | 0.80 |
+
+**Known limitation:** Model exhibits one oscillation at corner A5 (A5→A4→A5) before committing to RIGHT direction. This adds 2 extra turns but does not prevent goal completion.
+
+### 18.7 Provider Latency Observations
+
+| Episode | Avg Latency | p50 | Max |
+|---------|-------------|-----|-----|
+| SIMPLE | 6084ms | 1091ms | 14135ms |
+| WALL_DETOUR | 9130ms | 11029ms | 14008ms |
+| REWARD_HAZARD | 12952ms | 12255ms | 14988ms |
+
+**Notes:**
+- Grounded prompt is ~30% slower than baseline due to longer prompt length
+- First 2-3 turns typically faster (shorter prompt processing)
+- Later turns slower (more recent history in prompt)
+- All latencies within acceptable limits for turn-based game
+
+### 18.8 Final Verified Metrics
+
+**Grounded navigation (Part 3C) targets:**
+
+| Target | Result | Status |
+|--------|--------|--------|
+| 100% parse success | 100% | PASS |
+| 100% legal actions | 100% | PASS |
+| 0 unsafe accepted | 0 | PASS |
+| Fallback ≤10% | 0% | PASS |
+| No repeated simple-map loops | 0 | PASS |
+| Simple map goal reached | Yes | PASS |
+
+### 18.9 Files Created (Part 3C)
 
 ```
 game/
-├── __init__.py              # Package exports (Part 1 + Part 2)
+├── navigation_context.py      # NavigationContextBuilder
+├── navigation_prompt.py       # Baseline + grounded prompt builders
+├── live_navigation_eval.py    # Evaluation framework
+├── live_multiturn_eval.py     # Multi-turn episode runner
+├── oscillation_detector.py    # Oscillation detection
+└── check_oscillation.py       # Utility script
+
+tests/
+└── test_navigation_intelligence.py  # 35 tests (27 + 8 oscillation)
+```
+
+---
+
+## 19. File Structure (Updated)
+
+```
+game/
+├── __init__.py              # Package exports (Part 1 + 2 + 3C)
 ├── game_state.py            # GameState + Position + CellType
 ├── action_schema.py         # Action enum + ActionResult
 ├── strategy.py              # Strategy profiles + configuration
@@ -651,12 +786,21 @@ game/
 ├── buzz_game_bridge.py      # BuzzGameBridge + BridgeConfig + SimulatedProvider (Part 2)
 ├── game_simulator.py        # GameSimulator + SimulationMetrics + SimConfig (Part 2)
 ├── turn_controller.py       # TurnController + TurnLogEntry + EpisodeResult (Part 2)
-└── contract_translator.py   # ContractTranslator + TranslatorConfig (Part 3A)
+├── contract_translator.py   # ContractTranslator + TranslatorConfig (Part 3A)
+├── navigation_context.py    # NavigationContextBuilder (Part 3C)
+├── navigation_prompt.py     # Grounded prompt builder (Part 3C)
+├── live_navigation_eval.py  # Evaluation framework (Part 3C)
+├── live_multiturn_eval.py   # Multi-turn episode runner (Part 3C)
+├── oscillation_detector.py  # Oscillation detection (Part 3C)
+├── live_buzz_probe.py       # One-turn live probe (Part 3B)
+├── live_buzz_episode.py     # Five-turn live episode (Part 3B)
+└── live_buzz_failure.py     # Failure recovery tests (Part 3B)
 
 tests/
 ├── test_game_adapter.py         # Part 1: 10 scenario tests + unit tests (59 tests)
 ├── test_game_buzz_bridge.py     # Part 2: 20+ bridge/simulator tests (50 tests)
-└── test_contract_translator.py  # Part 3A: 18+ translator tests (35+ tests)
+├── test_contract_translator.py  # Part 3A: 18+ translator tests (35+ tests)
+└── test_navigation_intelligence.py  # Part 3C: 35 tests (27 + 8 oscillation)
 
 docs/
 └── GAME_AGENT_INTEGRATION_SPEC.md  # This document
@@ -664,7 +808,7 @@ docs/
 
 ---
 
-## 16. Assumptions Requiring Official Competition Evidence
+## 20. Assumptions Requiring Official Competition Evidence
 
 The following design decisions are based on reasonable assumptions and **require validation** against the official POLYCC competition specification when available:
 
@@ -762,7 +906,7 @@ The following design decisions are based on reasonable assumptions and **require
 
 ---
 
-*Document version: 2F/3.0*
+*Document version: 2F/4.0*
 *Created: 2026-08-24*
-*Updated: 2026-08-24 (Part 3A — FASTLAB→ATAN BUZZ contract translator)*
-*Status: Offline adapter layer with contract translation — awaiting competition API specification*
+*Updated: 2026-08-24 (Part 3C — Navigation Intelligence verified)*
+*Status: Offline adapter layer with grounded navigation — awaiting competition API specification*

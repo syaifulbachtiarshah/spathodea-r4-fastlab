@@ -12,6 +12,8 @@ Modules:
     buzz_game_bridge    — Bridge between GameAgentAdapter and BUZZ (Phase 2F Part 2)
     game_simulator      — Deterministic offline game simulator (Phase 2F Part 2)
     turn_controller     — Full turn pipeline orchestrator (Phase 2F Part 2)
+    navigation_context  — Deterministic navigation context builder (Phase 2F Part 3C)
+    navigation_prompt   — Grounded navigation prompt builder (Phase 2F Part 3C)
 """
 
 from .game_state import GameState, Position
@@ -23,6 +25,8 @@ from .action_parser import ActionParser, ActionParseResult
 from .buzz_game_bridge import BuzzGameBridge, BridgeConfig, BridgeResult, SimulatedProvider
 from .game_simulator import GameSimulator, SimulationMetrics, SimConfig
 from .turn_controller import TurnController, TurnLogEntry, ControllerConfig, EpisodeResult
+from .navigation_context import NavigationContext, NavigationContextBuilder
+from .navigation_prompt import build_baseline_prompt, build_grounded_nav_prompt, build_prompt
 
 __all__ = [
     # Part 1
@@ -36,4 +40,7 @@ __all__ = [
     "BuzzGameBridge", "BridgeConfig", "BridgeResult", "SimulatedProvider",
     "GameSimulator", "SimulationMetrics", "SimConfig",
     "TurnController", "TurnLogEntry", "ControllerConfig", "EpisodeResult",
+    # Part 3C
+    "NavigationContext", "NavigationContextBuilder",
+    "build_baseline_prompt", "build_grounded_nav_prompt", "build_prompt",
 ]
