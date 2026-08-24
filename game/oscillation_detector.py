@@ -6,10 +6,17 @@ Definition:
 - Oscillation event: P[n-2] == P[n] AND P[n-1] != P[n]
   Example: A5 -> A4 -> A5 = 1 event
 
-- Repeated loop: Same two-cell bounce continues
-  Example: A5 -> A4 -> A5 -> A4 -> A5 = repeated loop
+- Repeated sustained loop: A -> B -> A -> B -> A
+  This produces THREE consecutive oscillation events.
+  is_repeated_loop = true when consecutive_oscillation_count >= 3
 
 - Action oscillation: DOWN -> UP -> DOWN or LEFT -> RIGHT -> LEFT
+
+Consecutive event tracking:
+- Events at turns [4,5] = 2 consecutive events, no repeated loop
+- Events at turns [4,5,6] = 3 consecutive events, 1 repeated loop
+- Events at turns [1,5,9] = isolated events, no repeated loop
+- Events at turns [1,2,3,8,9,10] = 2 sustained repeated loops
 """
 
 from dataclasses import dataclass, field
@@ -26,7 +33,7 @@ class OscillationResult:
     event_detected: bool = False
     event_reason: str = ""
     is_repeated_loop: bool = False
-    loop_length: int = 0  # Number of oscillation events in sequence
+    loop_length: int = 0  # Number of oscillation events in current sequence
 
     def to_dict(self) -> dict:
         return {
@@ -65,6 +72,7 @@ class OscillationDetector:
         self._history_size = history_size
         self._oscillation_events: list[int] = []  # turn numbers
         self._consecutive_oscillation_count: int = 0
+        self._last_event_turn: int = -1
 
     @property
     def oscillation_events(self) -> list[int]:
@@ -78,18 +86,35 @@ class OscillationDetector:
 
     @property
     def is_in_repeated_loop(self) -> bool:
-        """Whether currently in a repeated oscillation loop."""
-        return self._consecutive_oscillation_count >= 2
+        """Whether currently in a repeated oscillation loop (3+ consecutive events)."""
+        return self._consecutive_oscillation_count >= 3
 
     @property
     def repeated_loop_count(self) -> int:
-        """Number of repeated loops (sequences of 3+ oscillation events)."""
+        """Number of sustained repeated loops (sequences of 3+ consecutive events).
+
+        Counts LOOP SEQUENCES, not individual events.
+        Events are consecutive only when turn numbers are adjacent.
+        """
+        if not self._oscillation_events:
+            return 0
+
         count = 0
-        consecutive = 0
-        for _ in self._oscillation_events:
-            consecutive += 1
-            if consecutive >= 3:
-                count += 1
+        consecutive = 1
+
+        for i in range(1, len(self._oscillation_events)):
+            if self._oscillation_events[i] == self._oscillation_events[i-1] + 1:
+                consecutive += 1
+            else:
+                # Check if completed sequence was a sustained loop (3+ events)
+                if consecutive >= 3:
+                    count += 1
+                consecutive = 1
+
+        # Check final sequence
+        if consecutive >= 3:
+            count += 1
+
         return count
 
     def check(self, new_position: str, new_action: str, turn: int = 0) -> OscillationResult:
@@ -116,8 +141,13 @@ class OscillationDetector:
                 result.event_reason = f"position_oscillation: {prev_prev}->{prev}->{new_position}"
 
                 # Track consecutive oscillations
-                self._consecutive_oscillation_count += 1
-                result.is_repeated_loop = self._consecutive_oscillation_count >= 2
+                if turn == self._last_event_turn + 1:
+                    self._consecutive_oscillation_count += 1
+                else:
+                    self._consecutive_oscillation_count = 1
+
+                self._last_event_turn = turn
+                result.is_repeated_loop = self._consecutive_oscillation_count >= 3
                 result.loop_length = self._consecutive_oscillation_count
 
                 self._oscillation_events.append(turn)
@@ -132,8 +162,14 @@ class OscillationDetector:
                 result.event_detected = True
                 result.event_reason = f"action_oscillation: {prev_prev_action}->{prev_action}->{new_action}"
 
-                self._consecutive_oscillation_count += 1
-                result.is_repeated_loop = self._consecutive_oscillation_count >= 2
+                # Track consecutive oscillations
+                if turn == self._last_event_turn + 1:
+                    self._consecutive_oscillation_count += 1
+                else:
+                    self._consecutive_oscillation_count = 1
+
+                self._last_event_turn = turn
+                result.is_repeated_loop = self._consecutive_oscillation_count >= 3
                 result.loop_length = self._consecutive_oscillation_count
 
                 if turn not in self._oscillation_events:
@@ -158,6 +194,7 @@ class OscillationDetector:
         self._actions.clear()
         self._oscillation_events.clear()
         self._consecutive_oscillation_count = 0
+        self._last_event_turn = -1
 
 
 # =============================================================================

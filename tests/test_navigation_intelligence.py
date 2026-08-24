@@ -388,3 +388,121 @@ class TestOscillationDetector:
         detector.reset()
         assert detector.total_events == 0
         assert len(detector.oscillation_events) == 0
+
+
+class TestOscillationDetectorConsistency:
+    """Tests for oscillation detector consistency (Part 3C Patch)."""
+
+    def test_aba_one_event_no_loop(self):
+        """A,B,A => 1 event, no repeated loop."""
+        detector = OscillationDetector()
+        detector.check("A", "WAIT", turn=0)
+        detector.check("B", "DOWN", turn=1)
+        result = detector.check("A", "UP", turn=2)
+        assert result.event_detected is True
+        assert detector.total_events == 1
+        assert detector.repeated_loop_count == 0
+        assert detector.is_in_repeated_loop is False
+
+    def test_abab_two_events_no_loop(self):
+        """A,B,A,B => 2 events, no repeated loop."""
+        detector = OscillationDetector()
+        detector.check("A", "WAIT", turn=0)
+        detector.check("B", "DOWN", turn=1)
+        detector.check("A", "UP", turn=2)   # event 1
+        detector.check("B", "DOWN", turn=3)  # event 2
+        assert detector.total_events == 2
+        assert detector.repeated_loop_count == 0
+        assert detector.is_in_repeated_loop is False
+
+    def test_ababa_three_events_one_loop(self):
+        """A,B,A,B,A => 3 events, 1 repeated loop."""
+        detector = OscillationDetector()
+        detector.check("A", "WAIT", turn=0)
+        detector.check("B", "DOWN", turn=1)
+        detector.check("A", "UP", turn=2)   # event 1
+        detector.check("B", "DOWN", turn=3)  # event 2
+        detector.check("A", "UP", turn=4)   # event 3
+        assert detector.total_events == 3
+        assert detector.repeated_loop_count == 1
+        assert detector.is_in_repeated_loop is True
+
+    def test_abacdcd_isolated_events(self):
+        """A,B,A,C,D,C => 2 position oscillation events, no sustained loop."""
+        detector = OscillationDetector()
+        detector.check("A", "WAIT", turn=0)
+        detector.check("B", "RIGHT", turn=1)
+        detector.check("A", "LEFT", turn=2)   # A,B,A = event at turn 2
+        detector.check("C", "RIGHT", turn=3)
+        detector.check("D", "RIGHT", turn=4)
+        detector.check("C", "LEFT", turn=5)   # C,D,C = event at turn 5
+        # Events at turns 2 and 5 are not consecutive
+        assert detector.total_events >= 2
+        assert detector.repeated_loop_count == 0
+
+    def test_isolated_non_consecutive_events(self):
+        """Events at non-adjacent turns => no sustained loop."""
+        detector = OscillationDetector()
+        detector.check("A", "WAIT", turn=0)
+        detector.check("B", "DOWN", turn=1)
+        detector.check("A", "UP", turn=2)    # event at turn 2
+        # Move away (break oscillation)
+        detector.check("C", "RIGHT", turn=3)
+        detector.check("D", "RIGHT", turn=4)
+        # New oscillation
+        detector.check("C", "LEFT", turn=5)  # C,D,C = event at turn 5
+        # Move away
+        detector.check("E", "RIGHT", turn=6)
+        detector.check("F", "RIGHT", turn=7)
+        # Another oscillation
+        detector.check("E", "LEFT", turn=8)  # E,F,E = event at turn 8
+
+        # Events at turns 2, 5, 8 - none consecutive
+        assert detector.total_events >= 3
+        assert detector.repeated_loop_count == 0
+
+    def test_two_independent_sustained_loops(self):
+        """Two independent sustained loops => repeated_loop_count = 2."""
+        detector = OscillationDetector()
+        detector.check("A", "WAIT", turn=0)
+        # First loop: turns 2,3,4 (3 consecutive events)
+        detector.check("B", "DOWN", turn=1)
+        detector.check("A", "UP", turn=2)    # event 1 (A,B,A)
+        detector.check("B", "DOWN", turn=3)   # event 2 (B,A,B)
+        detector.check("A", "UP", turn=4)    # event 3 (A,B,A)
+        # Break
+        detector.check("X", "RIGHT", turn=5)
+        detector.check("Y", "RIGHT", turn=6)
+        # Second loop: turns 9,10,11 (3 consecutive events)
+        detector.check("P", "DOWN", turn=7)
+        detector.check("Q", "UP", turn=8)
+        detector.check("P", "DOWN", turn=9)   # event 4 (P,Q,P)
+        detector.check("Q", "UP", turn=10)   # event 5 (Q,P,Q)
+        detector.check("P", "DOWN", turn=11)  # event 6 (P,Q,P)
+
+        assert detector.total_events == 6
+        assert detector.repeated_loop_count == 2
+
+    def test_four_events_one_loop(self):
+        """A,B,A,B,A,B => 4 events, 1 sustained loop."""
+        detector = OscillationDetector()
+        detector.check("A", "WAIT", turn=0)
+        detector.check("B", "DOWN", turn=1)
+        detector.check("A", "UP", turn=2)   # event 1
+        detector.check("B", "DOWN", turn=3)  # event 2
+        detector.check("A", "UP", turn=4)   # event 3
+        detector.check("B", "DOWN", turn=5)  # event 4
+        assert detector.total_events == 4
+        assert detector.repeated_loop_count == 1
+
+    def test_is_repeated_loop_threshold(self):
+        """is_in_repeated_loop requires 3+ consecutive events."""
+        detector = OscillationDetector()
+        detector.check("A", "WAIT", turn=0)
+        detector.check("B", "DOWN", turn=1)
+        detector.check("A", "UP", turn=2)   # 1 event
+        assert detector.is_in_repeated_loop is False
+        detector.check("B", "DOWN", turn=3)  # 2 events
+        assert detector.is_in_repeated_loop is False
+        detector.check("A", "UP", turn=4)   # 3 events
+        assert detector.is_in_repeated_loop is True
