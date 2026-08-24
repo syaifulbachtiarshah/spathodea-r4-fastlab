@@ -1,8 +1,8 @@
 # 🎮 Game Agent Integration Specification
 
-> **SPATHODEA R4 FASTLAB — Phase 2F Part 1**
+> **SPATHODEA R4 FASTLAB — Phase 2F (Parts 1 & 2)**
 > Module: `game/`
-> Status: Offline adapter layer — no live competition connection
+> Status: Offline adapter layer with BUZZ bridge simulation — no live competition connection
 > Date: 2026-08-24
 
 ---
@@ -22,16 +22,20 @@ GAME (competition API)
   → GAME
 ```
 
-### 1.2 Current Topology (Phase 2F Part 1)
+### 1.2 Current Topology (Phase 2F Part 2)
 
 ```
 GAME STATE (manual/test)
-  → GameAgentAdapter
-  → deterministic pathfinding
-  → recommended action
+  → GameAgentAdapter (planning context)
+  → BuzzGameBridge (ProviderRequest construction)
+  → SimulatedProvider (mock responses)
+  → ActionParser (response parsing)
+  → Safety Gate (action validation)
+  → GameSimulator (state application)
+  → TurnController (orchestration + combat log)
 ```
 
-No BUZZ connection. No provider calls. Fully offline.
+Simulated BUZZ bridge. No live provider calls. Fully offline.
 
 ---
 
@@ -308,51 +312,256 @@ Each turn produces a structured log entry:
 
 ---
 
-## 9. BUZZ Integration (Future — Not Active)
+## 9. BUZZ Bridge (Phase 2F Part 2 — Simulated)
 
-### 9.1 Planned Flow
+### 9.1 Bridge Flow (Implemented)
 
 ```
-GameAgentAdapter.plan_with_buzz(state)
-  → build PlanningContext
-  → serialize to ProviderRequest
-  → send to BUZZ POST /v1/generate
-  → parse ProviderResponse
-  → extract action from LLM response
-  → validate action against game state
-  → return validated action (or fallback to deterministic)
+GameAgentAdapter.plan(state)
+  → PlanningContext
+  → BuzzGameBridge.build_request(state, context)
+  → ProviderRequest v0.2.0
+  → SimulatedProvider.generate(request)
+  → ProviderResponse
+  → ActionParser.parse(response.content)
+  → ActionParseResult
+  → Safety Gate validation
+  → final Action
+  → GameSimulator.apply_action(action)
+  → TurnLogEntry
 ```
 
-### 9.2 Contract Compatibility
+### 9.2 Request Mapping (GAME → BUZZ)
+
+| Game Concept | ProviderRequest Field | Value |
+|-------------|----------------------|-------|
+| Navigation intent | `metadata.task_intent` | `"game_navigation"` |
+| Source identifier | `metadata.source` | `"SPATHODEA_GAME"` |
+| Turn number | `metadata.turn` | `int` |
+| Agent position | `metadata.agent_position` | Label (e.g. "C3") |
+| Strategy name | `metadata.strategy` | Profile name |
+| Grid dimensions | `metadata.grid_width/height` | `int` |
+| Reward count | `metadata.known_rewards` | `int` |
+| Hazard count | `metadata.known_hazards` | `int` |
+| Enemy count | `metadata.known_enemies` | `int` |
+| Goal position | `metadata.goal` | Label or null |
+| Task type | `task_type` | `"generate"` (v0.2.0 compatible) |
+| Provider | `provider_preference` | Configurable |
+| Reviewer | `reviewer_preference` | Configurable |
+| Execution | `execution_mode` | Configurable (default: sync) |
+| Temperature | `temperature` | `0.3` (low for deterministic actions) |
+| Max tokens | `max_tokens` | `50` (actions are short) |
+
+**Security:** No hidden validator data, expected_behavior, or validation_rules are sent.
+
+### 9.3 Contract Compatibility
 
 - Uses existing BUZZ v0.2.0 contract (unchanged)
-- `task_type = "generate"`
-- `metadata.source = "FASTLAB_GAME_AGENT"`
-- `metadata.record_type = "game_navigation"`
-- Provider preference flows through existing fields
+- `task_type = "generate"` (game_navigation is NOT a valid task_type)
+- Intent communicated via `metadata.task_intent = "game_navigation"`
+- `metadata.source = "SPATHODEA_GAME"`
+- Provider/reviewer preference flows through existing fields
+- All requests pass `ProviderRequest.validate()` without errors
 
-### 9.3 Fallback Behavior
+### 9.4 Action Parsing Rules
 
-If BUZZ is unavailable or LLM response is invalid:
-1. Log the failure
-2. Fall back to deterministic `plan()` result
-3. Never block on LLM timeout in game context
+Provider output is parsed in priority order:
+
+| Priority | Format | Example | Method |
+|----------|--------|---------|--------|
+| 1 | Fenced JSON | ` ```json\n{"action":"UP"}\n``` ` | `fenced_json` |
+| 2 | Plain JSON | `{"action": "RIGHT"}` | `json` |
+| 3 | Plain text | `UP` | `plain_text` |
+
+**Rejection criteria (immediate fail):**
+- Empty or whitespace-only output
+- HTML content (`<html>`, `<body>`, etc.)
+- Python tracebacks
+- Malformed JSON (when JSON-like input detected)
+- Multiple conflicting action words
+- Unknown/invalid action value
+- Future reserved actions (INTERACT, PICKUP, ATTACK)
+
+**Case handling:** All action names are case-insensitive.
+
+### 9.5 Safety Gate
+
+Before applying any provider-suggested action:
+
+| Check | Condition | Result if Failed |
+|-------|-----------|-----------------|
+| Grid bounds | Target position within grid | Fallback |
+| Wall collision | Target is not a wall | Fallback |
+| Locked door | Target not locked (or key held) | Fallback |
+| Action validity | Action produces valid movement | Fallback |
+
+**WAIT is always safe** — never rejected by safety gate.
+
+### 9.6 Fallback Behavior
+
+When provider output cannot produce a valid action:
+
+| Priority | Fallback | Source Label |
+|----------|----------|-------------|
+| 1 | Pathfinder-computed action toward goal | `fallback_pathfinder` |
+| 2 | WAIT | `fallback_wait` |
+
+Fallback reason is always recorded in the turn log.
+
+### 9.7 Provider Failure Handling
+
+| Failure Mode | Response | Fallback Triggered |
+|-------------|----------|-------------------|
+| Timeout (>5000ms) | Use pathfinder | Yes |
+| Unavailable (connection refused) | Use pathfinder | Yes |
+| Contract mismatch (wrong version) | Do NOT trust output | Yes |
+| Invalid/unparseable response | Use pathfinder | Yes |
+| Valid action into wall | Safety gate → pathfinder | Yes |
+
+**The game NEVER crashes** due to provider failure.
 
 ---
 
-## 10. File Structure
+## 10. Turn Controller
+
+### 10.1 Pipeline Per Turn
+
+```
+1. state → GameAgentAdapter.plan() → PlanningContext
+2. PlanningContext → BuzzGameBridge.request_action() → BridgeResult
+3. BridgeResult.action → GameSimulator.apply_action() → ActionResult
+4. Record TurnLogEntry with all metrics
+```
+
+### 10.2 Configuration
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `max_turns` | 100 | Maximum turns before forced termination |
+| `strategy` | "adaptive" | Strategy profile name |
+| `provider` | "mock" | Provider preference for BUZZ |
+| `reviewer` | None | Reviewer preference |
+| `execution_mode` | "sync" | BUZZ execution mode |
+
+### 10.3 Episode Termination
+
+| Condition | `termination_reason` |
+|-----------|---------------------|
+| Agent reaches goal | `goal_reached` |
+| Agent health ≤ 0 | `agent_dead` |
+| Turn count ≥ max_turns | `max_turns_exceeded` |
+
+---
+
+## 11. Game Simulator
+
+### 11.1 Action Application Rules
+
+| Event | Effect |
+|-------|--------|
+| Move to coin cell | Collect coin, +`coin_reward` score |
+| Move to key cell | Collect key, unlock matching doors |
+| Move to hazard cell | Take `hazard_damage` to health |
+| Move to enemy cell | Take `enemy_damage` to health |
+| Move to goal cell | +`goal_reward` score, episode ends |
+| Move to wall/locked door | Action blocked, agent stays |
+| WAIT | Turn advances, no movement |
+
+### 11.2 Default Scoring
+
+| Parameter | Default Value |
+|-----------|---------------|
+| `coin_reward` | 10 |
+| `key_reward` | 5 |
+| `goal_reward` | 100 |
+| `hazard_damage` | 20 |
+| `enemy_damage` | 30 |
+| `turn_penalty` | 0 |
+
+---
+
+## 12. Combat Log (Extended — Part 2)
+
+Each turn produces an extended structured log entry:
+
+```json
+{
+    "turn": 5,
+    "position_before": "C3",
+    "provider_requested": "mock",
+    "provider_used": "mock",
+    "raw_action_summary": "RIGHT",
+    "parsed_action": "RIGHT",
+    "final_action": "RIGHT",
+    "fallback_used": false,
+    "fallback_reason": "",
+    "position_after": "D3",
+    "score": 10,
+    "health": 100,
+    "status": "ok",
+    "pathfinder_ms": 0.125,
+    "bridge_processing_ms": 0.042,
+    "turn_processing_ms": 0.312
+}
+```
+
+### 12.1 Status Values (Extended)
+
+| Status | Meaning |
+|--------|---------|
+| `ok` | Action executed normally |
+| `damaged` | Agent took damage this turn |
+| `collected` | Item collected (key or coin) |
+| `blocked` | Action was invalid/blocked |
+| `goal_reached` | Agent arrived at goal |
+| `dead` | Agent health dropped to 0 |
+| `fallback` | Provider failed, fallback used |
+
+### 12.2 Security
+
+- No API keys or secrets in log
+- No raw prompts stored (only truncated summary ≤100 chars)
+- No provider credentials
+- No validation rules or hidden data
+- Safe for external audit/export
+
+---
+
+## 13. Performance Metrics
+
+Timing is tracked **separately** to avoid mixing local computation with future provider latency:
+
+| Metric | Scope | Measures |
+|--------|-------|----------|
+| `pathfinder_ms` | Per turn | Time in GameAgentAdapter.plan() (includes pathfinding) |
+| `bridge_processing_ms` | Per turn | Time in BuzzGameBridge (request build + parse + safety gate) |
+| `turn_processing_ms` | Per turn | Total wall-clock time for the entire turn |
+| `total_pathfinder_ms` | Episode | Sum of all pathfinder_ms |
+| `total_bridge_ms` | Episode | Sum of all bridge_processing_ms |
+| `total_turn_ms` | Episode | Sum of all turn_processing_ms |
+
+**Important:** These do NOT include future provider inference latency. When live providers are connected, provider latency will be a separate metric.
+
+---
+
+## 14. File Structure
 
 ```
 game/
-├── __init__.py              # Package exports
+├── __init__.py              # Package exports (Part 1 + Part 2)
 ├── game_state.py            # GameState + Position + CellType
 ├── action_schema.py         # Action enum + ActionResult
 ├── strategy.py              # Strategy profiles + configuration
 ├── pathfinder.py            # BFS + A* + Weighted A* algorithms
-└── game_agent_adapter.py    # GameAgentAdapter + PlanningContext + CombatLogEntry
+├── game_agent_adapter.py    # GameAgentAdapter + PlanningContext + CombatLogEntry
+├── action_parser.py         # ActionParser + ActionParseResult (Part 2)
+├── buzz_game_bridge.py      # BuzzGameBridge + BridgeConfig + SimulatedProvider (Part 2)
+├── game_simulator.py        # GameSimulator + SimulationMetrics + SimConfig (Part 2)
+└── turn_controller.py       # TurnController + TurnLogEntry + EpisodeResult (Part 2)
 
 tests/
-└── test_game_adapter.py     # 10 deterministic scenario tests + unit tests
+├── test_game_adapter.py     # Part 1: 10 scenario tests + unit tests (59 tests)
+└── test_game_buzz_bridge.py # Part 2: 20+ bridge/simulator tests (50+ tests)
 
 docs/
 └── GAME_AGENT_INTEGRATION_SPEC.md  # This document
@@ -360,7 +569,7 @@ docs/
 
 ---
 
-## 11. Assumptions Requiring Official Competition Evidence
+## 15. Assumptions Requiring Official Competition Evidence
 
 The following design decisions are based on reasonable assumptions and **require validation** against the official POLYCC competition specification when available:
 
@@ -381,9 +590,9 @@ The following design decisions are based on reasonable assumptions and **require
 
 ---
 
-## 12. Testing
+## 16. Testing
 
-### 12.1 Test Scenarios
+### 16.1 Part 1 Test Scenarios
 
 | # | Scenario | Validates |
 |---|----------|-----------|
@@ -398,7 +607,35 @@ The following design decisions are based on reasonable assumptions and **require
 | 9 | Contradictory navigation prompt | State overrides untrusted prompt |
 | 10 | Adaptive strategy | Health-based behavior switching |
 
-### 12.2 Test Properties
+### 16.2 Part 2 Test Scenarios (Bridge / Simulator)
+
+| # | Scenario | Validates |
+|---|----------|-----------|
+| 1 | Valid UP action | Parser accepts plain UP |
+| 2 | Valid DOWN action | Parser accepts plain DOWN |
+| 3 | Valid LEFT action | Parser accepts plain LEFT |
+| 4 | Valid RIGHT action | Parser accepts plain RIGHT |
+| 5 | JSON action output | Parser handles `{"action":"X"}` |
+| 6 | Malformed JSON | Fallback triggered on bad JSON |
+| 7 | Invalid action word | Unknown word → fallback |
+| 8 | Conflicting actions | Multiple actions → fallback |
+| 9 | Wall collision | Safety gate blocks wall move |
+| 10 | Out-of-bounds | Safety gate blocks edge move |
+| 11 | Locked door | Safety gate blocks locked door |
+| 12 | Provider timeout | Simulated timeout → pathfinder fallback |
+| 13 | Provider unavailable | Simulated unavailable → fallback |
+| 14 | Contract mismatch | Wrong version → do not trust output |
+| 15 | Fallback to pathfinder | Pathfinder gives valid action toward goal |
+| 16 | Fallback to WAIT | No path available → WAIT |
+| 17 | Goal reached | Simulator detects goal + awards score |
+| 18 | Coin collection | Coin collected + score updated |
+| 19 | Key collection | Key collected + door unlocked |
+| 20 | Hazard contact | Hazard damages health |
+| 21 | Max-turn termination | Episode ends at turn limit |
+| 22 | Strategy propagation | Strategy flows through request metadata |
+| 23 | Full simulated episode | End-to-end episode with metrics |
+
+### 16.3 Test Properties
 
 - **Deterministic:** Same inputs always produce same outputs
 - **Offline:** No network, no API keys, no LLM
@@ -407,6 +644,7 @@ The following design decisions are based on reasonable assumptions and **require
 
 ---
 
-*Document version: 2F/1.0*
+*Document version: 2F/2.0*
 *Created: 2026-08-24*
-*Status: Offline adapter layer — awaiting competition API specification*
+*Updated: 2026-08-24 (Part 2 — BUZZ bridge simulation)*
+*Status: Offline adapter layer with simulated bridge — awaiting competition API specification*
