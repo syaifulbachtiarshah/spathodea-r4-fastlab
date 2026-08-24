@@ -544,7 +544,100 @@ Timing is tracked **separately** to avoid mixing local computation with future p
 
 ---
 
-## 14. File Structure
+## 14. Contract Translator (Phase 2F Part 3A)
+
+### 14.1 Problem
+
+FASTLAB internal contract and ATAN BUZZ wire contract both use version `"0.2.0"` but their execution/task semantics differ:
+
+| Dimension | FASTLAB Internal | ATAN BUZZ Wire |
+|-----------|-----------------|----------------|
+| `execution_mode` | `sync \| async \| batch` | `single \| fallback \| consensus` |
+| `task_type` | `generate \| review \| score \| adversarial \| paraphrase` | `game_navigation` (+ future wire tasks) |
+| Game intent | `metadata.task_intent = "game_navigation"` | `task_type = "game_navigation"` |
+
+These are **NOT equivalent dimensions**. Translation is explicit, not mechanical.
+
+### 14.2 Contract Namespaces
+
+```
+SOURCE_CONTRACT = "FASTLAB-0.2.0"
+TARGET_CONTRACT = "ATAN-BUZZ-0.2.0"
+WIRE_CONTRACT_VERSION = "0.2.0"
+```
+
+### 14.3 Translation Rules
+
+| FASTLAB Field | Wire Field | Rule |
+|--------------|-----------|------|
+| `task_type = "generate"` | `task_type = "game_navigation"` | Translated when `metadata.task_intent == "game_navigation"` |
+| `execution_mode = "sync"` | `execution_mode` | **NOT** derived from FASTLAB; set via `TranslatorConfig.wire_execution_mode` |
+| `provider_preference` | `provider_preference` | Preserved if valid wire provider |
+| `reviewer_preference` | `reviewer_preference` | Preserved if valid wire reviewer |
+| `prompt` | `prompt` | Passed through unchanged |
+| `model`, `temperature`, etc. | Same fields | Passed through unchanged |
+| `metadata` (safe fields only) | `metadata` | Filtered to safe game fields + translator context |
+
+**Critical:** `sync` does NOT map to `single`. Wire execution mode is an explicit configuration choice.
+
+### 14.4 Wire Execution Modes
+
+| Mode | Provider | Reviewer | Description |
+|------|----------|----------|-------------|
+| `single` | Required | Should be `none` | Single provider, no review |
+| `fallback` | `auto` or explicit | `none` | Primary with fallback chain |
+| `consensus` | Required | **Required** (not `none`) | Generator + reviewer agreement |
+
+### 14.5 Wire Provider/Reviewer Validation
+
+| Role | Valid Values |
+|------|-------------|
+| Wire provider | `auto`, `mock`, `ollama`, `openai`, `gemini` |
+| Wire reviewer | `none`, `auto`, `openai`, `gemini` |
+
+### 14.6 Validation Order
+
+1. FASTLAB `ProviderRequest.validate()` — must pass (never bypass)
+2. `metadata.task_intent == "game_navigation"` — must be present
+3. `wire_execution_mode` — must be valid (`single \| fallback \| consensus`)
+4. `wire_provider` — must be in allowed set
+5. `wire_reviewer` — must be in allowed set
+6. Combination check: consensus requires reviewer ≠ `none`
+
+### 14.7 Metadata Filtering
+
+Only these fields are forwarded to wire metadata:
+
+```
+turn, agent_position, strategy, grid_width, grid_height,
+known_rewards, known_hazards, known_enemies, goal, source, task_intent
+```
+
+Added by translator:
+```
+source_contract = "FASTLAB-0.2.0"
+target_contract = "ATAN-BUZZ-0.2.0"
+```
+
+**Never forwarded:** API keys, secrets, debug fields, internal state.
+
+### 14.8 Future Wire Translation (Not Yet Implemented)
+
+The future live-BUZZ transport layer may translate FASTLAB internal
+semantics into the local BUZZ wire vocabulary:
+
+```
+FASTLAB (internal):              WIRE (to BUZZ gateway):
+  execution_mode = sync            execution_mode = single
+  task_type = generate             task_type = game_navigation
+  metadata.task_intent = game_nav  (conveyed via task_type)
+```
+
+This wire translation is produced offline for validation. It is NOT sent to a live endpoint yet.
+
+---
+
+## 15. File Structure
 
 ```
 game/
@@ -557,11 +650,13 @@ game/
 ├── action_parser.py         # ActionParser + ActionParseResult (Part 2)
 ├── buzz_game_bridge.py      # BuzzGameBridge + BridgeConfig + SimulatedProvider (Part 2)
 ├── game_simulator.py        # GameSimulator + SimulationMetrics + SimConfig (Part 2)
-└── turn_controller.py       # TurnController + TurnLogEntry + EpisodeResult (Part 2)
+├── turn_controller.py       # TurnController + TurnLogEntry + EpisodeResult (Part 2)
+└── contract_translator.py   # ContractTranslator + TranslatorConfig (Part 3A)
 
 tests/
-├── test_game_adapter.py     # Part 1: 10 scenario tests + unit tests (59 tests)
-└── test_game_buzz_bridge.py # Part 2: 20+ bridge/simulator tests (50+ tests)
+├── test_game_adapter.py         # Part 1: 10 scenario tests + unit tests (59 tests)
+├── test_game_buzz_bridge.py     # Part 2: 20+ bridge/simulator tests (50 tests)
+└── test_contract_translator.py  # Part 3A: 18+ translator tests (35+ tests)
 
 docs/
 └── GAME_AGENT_INTEGRATION_SPEC.md  # This document
@@ -569,7 +664,7 @@ docs/
 
 ---
 
-## 15. Assumptions Requiring Official Competition Evidence
+## 16. Assumptions Requiring Official Competition Evidence
 
 The following design decisions are based on reasonable assumptions and **require validation** against the official POLYCC competition specification when available:
 
@@ -590,9 +685,9 @@ The following design decisions are based on reasonable assumptions and **require
 
 ---
 
-## 16. Testing
+## 17. Testing
 
-### 16.1 Part 1 Test Scenarios
+### 17.1 Part 1 Test Scenarios
 
 | # | Scenario | Validates |
 |---|----------|-----------|
@@ -607,7 +702,7 @@ The following design decisions are based on reasonable assumptions and **require
 | 9 | Contradictory navigation prompt | State overrides untrusted prompt |
 | 10 | Adaptive strategy | Health-based behavior switching |
 
-### 16.2 Part 2 Test Scenarios (Bridge / Simulator)
+### 17.2 Part 2 Test Scenarios (Bridge / Simulator)
 
 | # | Scenario | Validates |
 |---|----------|-----------|
@@ -635,7 +730,30 @@ The following design decisions are based on reasonable assumptions and **require
 | 22 | Strategy propagation | Strategy flows through request metadata |
 | 23 | Full simulated episode | End-to-end episode with metrics |
 
-### 16.3 Test Properties
+### 17.3 Part 3A Test Scenarios (Contract Translator)
+
+| # | Scenario | Validates |
+|---|----------|-----------|
+| 1 | Valid game request → single | Full translation success |
+| 2 | task_type generate → game_navigation | Wire task_type mapping |
+| 3 | sync NOT blindly mapped | FASTLAB exec_mode ignored for wire |
+| 4 | Explicit single | Wire mode = single |
+| 5 | Explicit fallback | Wire mode = fallback |
+| 6 | Explicit consensus | Wire mode = consensus (with reviewer) |
+| 7 | Provider preservation | Wire provider from config |
+| 8 | Reviewer preservation | Wire reviewer from config |
+| 9 | Invalid provider | Rejected with error |
+| 10 | Invalid reviewer | Rejected with error |
+| 11 | Consensus without reviewer | Configuration error |
+| 12 | FASTLAB validation failure | Empty prompt rejected first |
+| 13 | Metadata preservation | Safe fields forwarded |
+| 14 | Contract namespace | SOURCE/TARGET in result + metadata |
+| 15 | contract_version = 0.2.0 | Wire version correct |
+| 16 | No mutation | Original request unchanged |
+| 17 | Deterministic | Same input → same output |
+| 18 | No secrets | No sensitive data in wire |
+
+### 17.4 Test Properties
 
 - **Deterministic:** Same inputs always produce same outputs
 - **Offline:** No network, no API keys, no LLM
@@ -644,7 +762,7 @@ The following design decisions are based on reasonable assumptions and **require
 
 ---
 
-*Document version: 2F/2.0*
+*Document version: 2F/3.0*
 *Created: 2026-08-24*
-*Updated: 2026-08-24 (Part 2 — BUZZ bridge simulation)*
-*Status: Offline adapter layer with simulated bridge — awaiting competition API specification*
+*Updated: 2026-08-24 (Part 3A — FASTLAB→ATAN BUZZ contract translator)*
+*Status: Offline adapter layer with contract translation — awaiting competition API specification*
