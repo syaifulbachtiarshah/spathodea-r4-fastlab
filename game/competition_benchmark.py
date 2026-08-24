@@ -396,11 +396,11 @@ def run_full_benchmark():
         for m in mt:
             agg.goals_reached += m.goal_reached
             agg.total_turns += m.total_turns
-            agg.total_optimal += m.optimal_path_length
             agg.total_fallback += m.fallback_count
             agg.total_oscillation += m.oscillation_events
             agg.total_repeated_loops += m.repeated_loops
             agg.total_unsafe += m.unsafe_accepted_actions
+            agg.episode_efficiencies.append(m.path_efficiency_ratio)
             if m.avg_provider_latency > 0:
                 agg.latencies.append(m.avg_provider_latency)
             print(f"  [{m.episode_name}] turns={m.total_turns} goal={m.goal_reached} "

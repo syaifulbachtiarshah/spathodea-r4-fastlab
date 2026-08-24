@@ -161,12 +161,12 @@ class ModelMultiTurnAgg:
     total_episodes: int = 0
     goals_reached: int = 0
     total_turns: int = 0
-    total_optimal: int = 0
     total_fallback: int = 0
     total_oscillation: int = 0
     total_repeated_loops: int = 0
     total_unsafe: int = 0
     latencies: list = field(default_factory=list)
+    episode_efficiencies: list = field(default_factory=list)
 
     @property
     def goal_completion_rate(self) -> float:
@@ -174,9 +174,10 @@ class ModelMultiTurnAgg:
 
     @property
     def avg_path_efficiency(self) -> float:
-        if self.total_turns == 0 or self.total_optimal == 0:
+        """Mean of per-episode efficiencies. Unreached episodes = 0.0."""
+        if not self.episode_efficiencies:
             return 0.0
-        return self.total_optimal / self.total_turns
+        return sum(self.episode_efficiencies) / len(self.episode_efficiencies)
 
     @property
     def fallback_rate(self) -> float:
@@ -199,6 +200,7 @@ class ModelMultiTurnAgg:
             "total_repeated_loops": self.total_repeated_loops,
             "total_unsafe": self.total_unsafe,
             "avg_latency_ms": round(self.avg_latency_ms, 1),
+            "episode_efficiencies": [round(e, 3) for e in self.episode_efficiencies],
         }
 
 

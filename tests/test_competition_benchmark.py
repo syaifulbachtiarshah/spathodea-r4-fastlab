@@ -297,3 +297,130 @@ class TestPathfinderIntegration:
         pf = Pathfinder()
         result = pf.astar(state, Position(0, 0), Position(4, 0))
         assert not result.found
+
+
+class TestEfficiencyCorrection:
+    def test_unreached_episode_efficiency_zero(self):
+        m = MultiTurnMetrics(optimal_path_length=8, turns_to_goal=0, goal_reached=False)
+        assert m.path_efficiency_ratio == 0.0
+
+    def test_three_unreached_aggregate_zero(self):
+        agg = ModelMultiTurnAgg(model="test", total_episodes=3,
+            episode_efficiencies=[0.0, 0.0, 0.0])
+        assert agg.avg_path_efficiency == 0.0
+
+    def test_reached_8_8_efficiency_one(self):
+        m = MultiTurnMetrics(optimal_path_length=8, turns_to_goal=8, goal_reached=True)
+        assert m.path_efficiency_ratio == 1.0
+
+    def test_three_reached_aggregate_one(self):
+        agg = ModelMultiTurnAgg(model="test", total_episodes=3, goals_reached=3,
+            episode_efficiencies=[1.0, 1.0, 1.0])
+        assert agg.avg_path_efficiency == 1.0
+
+    def test_mixed_efficiencies_mean(self):
+        agg = ModelMultiTurnAgg(model="test", total_episodes=3,
+            episode_efficiencies=[1.0, 0.0, 1.0])
+        assert abs(agg.avg_path_efficiency - 2 / 3) < 1e-9
+
+    def test_agg_to_dict_includes_episode_efficiencies(self):
+        agg = ModelMultiTurnAgg(model="test", total_episodes=2,
+            episode_efficiencies=[0.8, 1.0])
+        d = agg.to_dict()
+        assert "episode_efficiencies" in d
+        assert d["episode_efficiencies"] == [0.8, 1.0]
+
+
+class TestLatencyBucketIntegrity:
+    def test_buckets_sum_to_count(self):
+        lats = [500, 1500, 3000, 6000, 12000]
+        ld = LatencyDistribution(model="test", latencies=lats)
+        cls = ld.classify()
+        total = sum(cls.values())
+        assert total == ld.count
+
+    def test_p50_low_implies_fast_exists(self):
+        lats = [500, 600, 700, 800, 900]
+        ld = LatencyDistribution(model="test", latencies=lats)
+        assert ld.p50_ms < 2000
+        cls = ld.classify()
+        assert cls["FAST"] > 0
+
+    def test_empty_buckets_sum_zero(self):
+        ld = LatencyDistribution(model="test")
+        cls = ld.classify()
+        assert sum(cls.values()) == 0
+
+    def test_all_fast(self):
+        lats = [100, 200, 300]
+        ld = LatencyDistribution(model="test", latencies=lats)
+        cls = ld.classify()
+        assert cls["FAST"] == 3
+        assert cls["ACCEPTABLE"] == 0
+        assert cls["SLOW"] == 0
+        assert cls["VERY_SLOW"] == 0
+
+    def test_all_very_slow(self):
+        lats = [11000, 12000, 13000]
+        ld = LatencyDistribution(model="test", latencies=lats)
+        cls = ld.classify()
+        assert cls["VERY_SLOW"] == 3
+        assert sum(cls.values()) == 3
+
+
+class TestResultArtifactIntegrity:
+    def test_result_schema_has_required_keys(self):
+        import json
+        path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "game", "competition_benchmark_results.json")
+        if os.path.exists(path):
+            with open(path) as f:
+                data = json.load(f)
+            assert "artifact_schema_version" in data
+            assert "benchmark_commit" in data
+            assert "sample_count_per_model" in data or "stage_a_one_turn" in data
+
+    def test_latency_bucket_totals_match(self):
+        import json
+        path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "game", "competition_benchmark_results.json")
+        if os.path.exists(path):
+            with open(path) as f:
+                data = json.load(f)
+            for model_key in ["qwen2.5:7b", "llama3.2:3b"]:
+                lat_data = data["stage_d_latency"].get(model_key, {})
+                cls = lat_data.get("classification", {})
+                total = sum(cls.values())
+                count = lat_data.get("count", 0)
+                assert total == count, f"{model_key}: bucket total {total} != count {count}"
+
+    def test_multi_turn_efficiency_consistency(self):
+        import json
+        path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "game", "competition_benchmark_results.json")
+        if os.path.exists(path):
+            with open(path) as f:
+                data = json.load(f)
+            for model_key in ["qwen2.5:7b", "llama3.2:3b"]:
+                mt = data["stage_b_multi_turn"].get(model_key, {})
+                effs = mt.get("episode_efficiencies", [])
+                reported = mt.get("avg_path_efficiency", -1)
+                if effs:
+                    expected = sum(effs) / len(effs)
+                    assert abs(reported - expected) < 0.001, \
+                        f"{model_key}: reported={reported} expected={expected}"
+
+
+class TestBuzzySuiteReporting:
+    def test_result_has_separate_suites(self):
+        import json
+        path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "game", "competition_benchmark_results.json")
+        if os.path.exists(path):
+            with open(path) as f:
+                data = json.load(f)
+            br = data.get("buzz_regressions", {})
+            assert "legacy" in br
+            assert "handshake" in br
+            assert "migration" in br
+            assert "total" in br
