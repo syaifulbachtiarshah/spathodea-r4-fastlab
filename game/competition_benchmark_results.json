@@ -1,0 +1,165 @@
+{
+  "benchmark_version": "Phase 2F Part 3D",
+  "timestamp": "2026-08-24",
+  "security_note": "BUZZ=127.0.0.1 only, no complete prompts, no secrets",
+  "disclaimer": "NOT POLYCC OFFICIAL SCORE. Internal readiness assessment only.",
+
+  "stage_a_one_turn": {
+    "qwen2.5:7b": {
+      "model": "qwen2.5:7b",
+      "total_scenarios": 15,
+      "parse_success_rate": 1.0,
+      "legal_action_rate": 0.933,
+      "unsafe_count": 0,
+      "fallback_count": 0,
+      "fallback_rate": 0.0,
+      "goal_progress_rate": 0.933,
+      "avg_latency_ms": 5471.5,
+      "p50_latency_ms": 826,
+      "max_latency_ms": 13510
+    },
+    "llama3.2:3b": {
+      "model": "llama3.2:3b",
+      "total_scenarios": 15,
+      "parse_success_rate": 1.0,
+      "legal_action_rate": 0.933,
+      "unsafe_count": 0,
+      "fallback_count": 0,
+      "fallback_rate": 0.0,
+      "goal_progress_rate": 0.933,
+      "avg_latency_ms": 6351.3,
+      "p50_latency_ms": 6019,
+      "max_latency_ms": 12035
+    }
+  },
+
+  "stage_b_multi_turn": {
+    "qwen2.5:7b": {
+      "model": "qwen2.5:7b",
+      "total_episodes": 3,
+      "goals_reached": 0,
+      "goal_completion_rate": 0.0,
+      "total_turns": 30,
+      "avg_path_efficiency": 0.8,
+      "fallback_rate": 0.0,
+      "total_oscillation": 9,
+      "total_repeated_loops": 0,
+      "total_unsafe": 0,
+      "avg_latency_ms": 11443,
+      "episodes": [
+        {"name": "simple_empty", "turns": 10, "goal": false, "efficiency": 0.0, "oscillation": 3},
+        {"name": "wall_detour", "turns": 10, "goal": false, "efficiency": 0.0, "oscillation": 3},
+        {"name": "reward_hazard", "turns": 10, "goal": false, "efficiency": 0.0, "oscillation": 3}
+      ]
+    },
+    "llama3.2:3b": {
+      "model": "llama3.2:3b",
+      "total_episodes": 3,
+      "goals_reached": 3,
+      "goal_completion_rate": 1.0,
+      "total_turns": 24,
+      "avg_path_efficiency": 1.0,
+      "fallback_rate": 0.0,
+      "total_oscillation": 0,
+      "total_repeated_loops": 0,
+      "total_unsafe": 0,
+      "avg_latency_ms": 6819,
+      "episodes": [
+        {"name": "simple_empty", "turns": 8, "goal": true, "efficiency": 1.0, "oscillation": 0},
+        {"name": "wall_detour", "turns": 8, "goal": true, "efficiency": 1.0, "oscillation": 0},
+        {"name": "reward_hazard", "turns": 8, "goal": true, "efficiency": 1.0, "oscillation": 0}
+      ]
+    }
+  },
+
+  "stage_c_strategy_llama3.2:3b": {
+    "safe": {"goal_reached": true, "score": 100, "health": 60, "turns": 4, "oscillation": 0},
+    "speedrun": {"goal_reached": true, "score": 100, "health": 100, "turns": 4, "oscillation": 0},
+    "reward_max": {"goal_reached": false, "score": 10, "health": 100, "turns": 5, "oscillation": 0},
+    "adaptive": {"goal_reached": false, "score": 10, "health": 80, "turns": 5, "oscillation": 0}
+  },
+
+  "stage_d_latency": {
+    "qwen2.5:7b": {
+      "avg_ms": 5471.5,
+      "p50_ms": 826,
+      "max_ms": 13510,
+      "classification": {"FAST": 0, "ACCEPTABLE": 0, "SLOW": 15, "VERY_SLOW": 0}
+    },
+    "llama3.2:3b": {
+      "avg_ms": 6351.3,
+      "p50_ms": 6019,
+      "max_ms": 12035,
+      "classification": {"FAST": 0, "ACCEPTABLE": 0, "SLOW": 15, "VERY_SLOW": 0}
+    }
+  },
+
+  "stage_e_readiness_score": {
+    "qwen2.5:7b": {
+      "model": "qwen2.5:7b",
+      "component_scores": {
+        "safety_legal_correctness": 0.967,
+        "goal_completion_progress": 0.467,
+        "path_efficiency": 0.8,
+        "fallback_independence": 1.0,
+        "oscillation_control": 0.7,
+        "latency": 0.4
+      },
+      "SPATHODEA_INTERNAL_READINESS_SCORE": 0.737,
+      "grade": "C"
+    },
+    "llama3.2:3b": {
+      "model": "llama3.2:3b",
+      "component_scores": {
+        "safety_legal_correctness": 0.967,
+        "goal_completion_progress": 0.967,
+        "path_efficiency": 1.0,
+        "fallback_independence": 1.0,
+        "oscillation_control": 1.0,
+        "latency": 0.4
+      },
+      "SPATHODEA_INTERNAL_READINESS_SCORE": 0.922,
+      "grade": "A"
+    }
+  },
+
+  "stage_f_config": {
+    "PRIMARY_MODEL": "llama3.2:3b",
+    "SECONDARY_MODEL": "qwen2.5:7b",
+    "DEFAULT_STRATEGY": "safe",
+    "SAFETY_FALLBACK": "pathfinder_astar"
+  },
+
+  "model_winner": {
+    "model": "llama3.2:3b",
+    "justification": "llama3.2:3b achieves 100% goal completion across all multi-turn episodes with optimal path efficiency (1.0), zero oscillation events, and zero unsafe actions. qwen2.5:7b fails to reach any goal (0/3) and exhibits 9 oscillation events. Both models have identical one-turn parse/legal/safety metrics. llama3.2:3b has slightly higher avg latency but much more consistent p50. Grade A vs C."
+  },
+
+  "best_strategy_by_scenario": {
+    "hazard_pressure": "safe",
+    "clear_route": "speedrun",
+    "reward_detour": "reward_max",
+    "mixed_risk_reward": "adaptive"
+  },
+
+  "weaknesses": [
+    "Both models are SLOW (avg 5-6s) — no FAST classifications",
+    "qwen2.5:7b has severe oscillation problem in multi-turn (9 events in 3 episodes)",
+    "qwen2.5:7b fails 100% of multi-turn episodes (0/3 goal reached)",
+    "reward_max and adaptive strategies did not reach goal in tested scenarios (may need prompt tuning)",
+    "Both models occasionally output non-legal actions (6.7% illegal rate)",
+    "No model achieves FAST (<2s) latency consistently"
+  ],
+
+  "recommendations_before_POLYCC": [
+    "USE llama3.2:3b as primary model — it demonstrates reliable goal completion",
+    "USE safe strategy as default — it avoids hazards while still reaching goal",
+    "Add explicit anti-oscillation rule to grounded prompt (currently only says 'avoid immediate oscillation')",
+    "Consider reducing max_tokens from 8 to 4 to reduce latency (actions are single tokens)",
+    "Add prompt post-processing to strip explanations — both models sometimes return prose",
+    "Test with temperature=0.1 to see if it reduces oscillation in qwen",
+    "Implement model fallback: try llama3.2:3b first, fall back to qwen2.5:7b on timeout",
+    "Add scoring reward for goal completion in prompt to improve reward_max/adaptive strategies",
+    "Run 50+ scenario benchmark before official competition to establish statistical confidence"
+  ]
+}
