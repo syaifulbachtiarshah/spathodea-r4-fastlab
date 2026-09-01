@@ -55,6 +55,20 @@ python fastlab.py export --format messages
 python fastlab.py benchmark
 ```
 
+### Final-readiness gate
+
+Before a competition demo or release candidate:
+
+```bash
+python -m pip install -r requirements-dev.txt
+python scripts/final_readiness.py
+```
+
+GitHub Actions runs the same secret-free health, dataset, and regression checks
+on every push to the competition branches. See
+[`docs/FINAL_READINESS.md`](docs/FINAL_READINESS.md) for the 14 September 2026
+final procedure and fallback plan.
+
 ## Project Structure
 
 ```
@@ -89,11 +103,11 @@ spathodea-r4-fastlab/
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| 1 | ✅ Current | Structure, schemas, validator, dedup, splitter, exporter, CLI |
-| 2 | Planned | LLM-powered generation (OpenAI/Gemini adapters) |
-| 3 | Planned | Quality scoring, semantic dedup, balancing |
-| 4 | Planned | Full-scale generation (10K–100K records) |
-| 5 | Planned | Competition submission & model fine-tuning |
+| 1 | ✅ Complete | Structure, schemas, validator, dedup, splitter, exporter, CLI |
+| 2 | ✅ Complete | Provider contract, BUZZ integration, and local Ollama path |
+| 2E | ✅ Complete | LIVE-20 dataset validation and handoff evidence |
+| 2F | ✅ Verified | Game adapter, navigation intelligence, and competition benchmark |
+| Final gate | ✅ Automated | Doctor, dataset validation, and 382 offline regression tests |
 
 ## Security
 
@@ -126,4 +140,4 @@ The internal master record:
 
 ---
 
-*Version: 0.1.0 | Phase 1 | 2026-08-24*
+*Competition readiness baseline | Phase 2F | 2026-09-01*

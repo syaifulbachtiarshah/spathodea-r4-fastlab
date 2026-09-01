@@ -1,0 +1,43 @@
+name: SPATHODEA Quality Gate
+
+on:
+  push:
+    branches: [main, feature/aws-ai-league-student-mode]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements-dev.txt
+
+      - name: Run FASTLAB health check
+        run: python fastlab.py doctor
+
+      - name: Validate competition records
+        run: python fastlab.py validate
+
+      - name: Run offline regression suite
+        run: python -m pytest -q
+
